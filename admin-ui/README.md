@@ -20,10 +20,12 @@ Admin UI for managing VoiceAgent configuration and tracking usage.
 
 ## Environment variables
 
-Create `admin-ui/.env.local` (copy from `admin-ui/env.example`):
+Prisma loads env vars from `admin-ui/.env`. Next.js also supports `admin-ui/.env.local`.
+Simplest: put everything in `admin-ui/.env` (copy from `admin-ui/env.example`).
 
 ```bash
 DATABASE_URL="postgresql://voiceagent_admin:REPLACE_ME@127.0.0.1:5433/voiceagent_admin"
+SHADOW_DATABASE_URL="postgresql://voiceagent_admin:REPLACE_ME@127.0.0.1:5433/voiceagent_shadow"
 NEXTAUTH_URL="http://localhost:3100"
 NEXTAUTH_SECRET="REPLACE_WITH_RANDOM"
 GOOGLE_CLIENT_ID="REPLACE_ME"
