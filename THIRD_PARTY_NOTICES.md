@@ -3,10 +3,9 @@
 This repository contains or is derived from third‑party open-source components. Your use of
 those components is governed by their respective licenses.
 
-## Google Cloud Platform — generative-ai (Gemini Live demo origins)
+## Google Cloud Platform — generative-ai (sample code origins)
 
-Portions of the UI/proxy approach and demo structure were adapted from Google Cloud Platform
-sample code.
+Portions of the UI/proxy approach and demo structure were adapted from Google Cloud Platform sample code.
 
 - **Upstream project**: `GoogleCloudPlatform/generative-ai`
 - **License**: Apache License 2.0 (see `LICENSES/Apache-2.0.txt`)

@@ -1,19 +1,17 @@
-# Kia VoiceAgent (Gemini Live 2.5) — UI + Telephony WebSockets
+# Kia VoiceAgent — UI + Telephony WebSockets
 
 This repo is a **VoiceAgent WebSocket stack** for:
 
 - **Browser UI testing** (mic ↔ Gemini Live ↔ speaker) over **WSS** (required for browser audio APIs)
 - **Telephony testing (Ozonetel/Waybeo style)** over **WS/WSS** using the same Gemini Live conversation flow
 
-It is built around **Gemini Live** using the model:
-
-- `gemini-live-2.5-flash-native-audio`
+It uses a **real-time native-audio VoiceAgent backend** (configured in the runtime services).
 
 ---
 
 ## What runs where
 
-### 1) Browser UI + Gemini WS proxy (`server.py`)
+### 1) Browser UI + VoiceAgent WS proxy (`server.py`)
 - **HTTP UI**: defaults to `http://127.0.0.1:3001`
 - **WS proxy (internal)**: defaults to `ws://127.0.0.1:9001`
 - Intended to be exposed via **nginx** as:
@@ -31,7 +29,7 @@ For telephony details, see `telephony/README.md`.
 
 ## Quick start (local dev)
 
-### UI + Gemini WS proxy
+### UI + VoiceAgent WS proxy
 
 ```bash
 cd Kia-VA-G2.5
@@ -43,7 +41,7 @@ HTTP_PORT=3001 WS_PORT=9001 python3 server.py
 Open `http://localhost:3001` and set:
 - **Proxy WebSocket URL**: `ws://localhost:9001` (local) or `wss://<domain>/geminiWs` (nginx)
 - **Project ID**: your GCP project (e.g. `voiceagentprojects`)
-- **Model**: `gemini-live-2.5-flash-native-audio`
+- **Model**: (use the default configured by your deployment)
 
 ### Telephony service (test port)
 
@@ -108,7 +106,7 @@ If you already have unit files, keep them. If not, ask and we’ll generate the 
 - **Prompt / greeting**: update the system instructions in `frontend/index.html` (UI) and `telephony/kia_prompt.txt` (telephony)
 - **Voice**: UI voice is chosen in `frontend/index.html`; telephony defaults live in telephony config
 - **Routing**: keep UI WS separate from telephony WS to avoid port collisions
-- **Model**: keep fixed to `gemini-live-2.5-flash-native-audio` unless you explicitly want to test other models
+- **Model**: keep fixed to your production VoiceAgent model unless you explicitly want to test other models
 
 ---
 

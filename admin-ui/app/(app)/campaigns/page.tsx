@@ -29,7 +29,7 @@ export default async function CampaignsPage() {
               <tr className="border-b border-slate-200">
                 <th className="py-3 pr-4 font-medium">Name</th>
                 <th className="py-3 pr-4 font-medium">Phone</th>
-                <th className="py-3 pr-4 font-medium">Provider</th>
+                <th className="py-3 pr-4 font-medium">Engine</th>
                 <th className="py-3 pr-4 font-medium">Status</th>
                 <th className="py-3 pr-4 font-medium"></th>
               </tr>
@@ -43,7 +43,7 @@ export default async function CampaignsPage() {
                     </Link>
                   </td>
                   <td className="py-3 pr-4 text-slate-700">{c.phoneNumber ?? "—"}</td>
-                  <td className="py-3 pr-4 text-slate-700">{c.provider}</td>
+                  <td className="py-3 pr-4 text-slate-700">{c.engine}</td>
                   <td className="py-3 pr-4">
                     <span
                       className={

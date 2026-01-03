@@ -4,7 +4,7 @@ Admin UI for managing VoiceAgent configuration and tracking usage.
 
 ## Features (MVP)
 
-- Create/edit **campaigns** (per number/campaign) with provider selection (Gemini vs OpenAI)
+- Create/edit **campaigns** (per number/campaign) with VoiceAgent **engine** selection (Primary/Secondary)
 - Create/edit **call flows** (greeting + ordered steps)
 - Manage **guardrails**
 - Manage **voice profiles** (voice + accent notes/settings metadata)

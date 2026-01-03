@@ -16,8 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarNav />
             </div>
             <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
-              Tip: Configure per campaign to switch providers (Gemini/OpenAI) and customize call
-              flows.
+              Tip: Configure per campaign to select the VoiceAgent engine and customize call flows.
             </div>
           </div>
         </aside>

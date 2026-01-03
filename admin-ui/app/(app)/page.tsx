@@ -38,9 +38,9 @@ export default async function DashboardPage() {
           <div className="text-3xl font-semibold text-slate-900">{feedbackRecent}</div>
           <div className="mt-1 text-sm text-slate-600">Testing notes & issues</div>
         </Card>
-        <Card title="Provider switching">
+        <Card title="Engine switching">
           <div className="text-sm text-slate-600">
-            Set per campaign. Default: <span className="font-medium text-slate-900">Gemini</span>
+            Set per campaign. Default: <span className="font-medium text-slate-900">Primary</span>
           </div>
         </Card>
       </div>

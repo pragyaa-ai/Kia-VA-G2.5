@@ -10,7 +10,7 @@ export default async function CampaignLayout({
 }) {
   const campaign = await prisma.campaign.findUnique({
     where: { id: params.id },
-    select: { id: true, name: true, phoneNumber: true, provider: true, isActive: true }
+    select: { id: true, name: true, phoneNumber: true, engine: true, isActive: true }
   });
 
   if (!campaign) {
@@ -46,7 +46,7 @@ export default async function CampaignLayout({
             <div className="text-xs text-slate-500">Campaign</div>
             <h1 className="mt-1 text-lg font-semibold text-slate-900">{campaign.name}</h1>
             <div className="mt-1 text-sm text-slate-600">
-              {campaign.phoneNumber ?? "—"} • {campaign.provider} •{" "}
+              {campaign.phoneNumber ?? "—"} • {campaign.engine} •{" "}
               {campaign.isActive ? "Active" : "Inactive"}
             </div>
           </div>

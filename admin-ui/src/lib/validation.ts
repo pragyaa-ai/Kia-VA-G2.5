@@ -3,7 +3,7 @@ import { z } from "zod";
 export const CampaignCreateSchema = z.object({
   name: z.string().min(1).max(120),
   phoneNumber: z.string().min(3).max(32).optional(),
-  provider: z.enum(["GEMINI", "OPENAI"]).default("GEMINI"),
+  engine: z.enum(["PRIMARY", "SECONDARY"]).default("PRIMARY"),
   isActive: z.boolean().default(true)
 });
 

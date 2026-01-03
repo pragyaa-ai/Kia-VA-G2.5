@@ -10,7 +10,7 @@ export default function NewCampaignPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [provider, setProvider] = useState<"GEMINI" | "OPENAI">("GEMINI");
+  const [engine, setEngine] = useState<"PRIMARY" | "SECONDARY">("PRIMARY");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export default function NewCampaignPage() {
         body: JSON.stringify({
           name,
           phoneNumber: phoneNumber || undefined,
-          provider,
+          engine,
           isActive
         })
       });
@@ -70,15 +70,15 @@ export default function NewCampaignPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Provider</label>
+            <label className="text-sm font-medium text-slate-700">VoiceAgent engine</label>
             <div className="mt-2">
               <select
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                value={provider}
-                onChange={(e) => setProvider(e.target.value as any)}
+                value={engine}
+                onChange={(e) => setEngine(e.target.value as any)}
               >
-                <option value="GEMINI">Gemini Live</option>
-                <option value="OPENAI">OpenAI Realtime</option>
+                <option value="PRIMARY">Primary</option>
+                <option value="SECONDARY">Secondary</option>
               </select>
             </div>
           </div>
