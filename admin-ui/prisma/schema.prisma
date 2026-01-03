@@ -25,6 +25,7 @@ model Campaign {
   guardrails    Guardrail[]
   voiceProfile  VoiceProfile?
   sessions      CallSession[]
+  feedback      Feedback[]
 
   @@index([isActive])
   @@index([phoneNumber])
