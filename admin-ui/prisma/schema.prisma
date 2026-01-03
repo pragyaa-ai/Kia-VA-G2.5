@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AiProvider {
+  GEMINI
+  OPENAI
+}
+
+model Campaign {
+  id            String      @id @default(cuid())
+  name          String
+  phoneNumber   String?
+  provider      AiProvider  @default(GEMINI)
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  callFlow      CallFlow?
+  guardrails    Guardrail[]
+  voiceProfile  VoiceProfile?
+  sessions      CallSession[]
+
+  @@index([isActive])
+  @@index([phoneNumber])
+}
+
+model CallFlow {
+  id          String    @id @default(cuid())
+  campaignId  String    @unique
+  greeting    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  steps       CallFlowStep[]
+}
+
+model CallFlowStep {
+  id          String   @id @default(cuid())
+  callFlowId  String
+  order       Int
+  title       String
+  content     String
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  callFlow    CallFlow @relation(fields: [callFlowId], references: [id], onDelete: Cascade)
+
+  @@unique([callFlowId, order])
+  @@index([callFlowId])
+}
+
+model Guardrail {
+  id          String    @id @default(cuid())
+  campaignId  String
+  name        String
+  description String?
+  ruleText    String
+  enabled     Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([enabled])
+}
+
+model VoiceProfile {
+  id            String    @id @default(cuid())
+  campaignId    String    @unique
+  voiceName     String
+  accentNotes   String?
+  settingsJson  Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id          String    @id @default(cuid())
+  campaignId  String?
+  source      String    @default("testing")
+  message     String
+  createdAt   DateTime  @default(now())
+
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([createdAt])
+}
+
+model CallSession {
+  id            String      @id @default(cuid())
+  campaignId    String?
+  provider      AiProvider  @default(GEMINI)
+  direction     String      @default("inbound")
+  fromNumber    String?
+  toNumber      String?
+  startedAt     DateTime    @default(now())
+  endedAt       DateTime?
+  durationSec   Int?
+  minutesBilled Decimal?    @db.Decimal(10, 2)
+  metaJson      Json?
+
+  campaign      Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([startedAt])
+  @@index([provider])
+}
+
+// ---- NextAuth (Prisma Adapter compatible shape) ----
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+
