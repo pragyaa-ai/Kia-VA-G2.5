@@ -2,4 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* App defaults */
+html,
+body {
+  height: 100%;
+}
+
+
 

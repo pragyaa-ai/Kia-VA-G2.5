@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma";
 import { FeedbackCreateSchema } from "@/src/lib/validation";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const campaignId = url.searchParams.get("campaignId") ?? undefined;
+
   const feedback = await prisma.feedback.findMany({
+    where: campaignId ? { campaignId } : undefined,
     orderBy: { createdAt: "desc" },
     take: 100
   });
