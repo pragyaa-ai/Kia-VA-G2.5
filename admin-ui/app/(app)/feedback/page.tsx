@@ -1,45 +1,65 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 
-type Feedback = { id: string; message: string; source: string; createdAt: string; campaignId?: string | null };
+interface FeedbackItem {
+  id: string;
+  source: string;
+  message: string;
+  createdAt: string;
+  voiceAgent?: { id: string; name: string };
+}
 
-export default function FeedbackPage() {
-  const [items, setItems] = useState<Feedback[]>([]);
+export default function GlobalFeedbackPage() {
+  const [items, setItems] = useState<FeedbackItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      const res = await fetch("/api/feedback", { cache: "no-store" });
-      const json = await res.json();
-      setItems(json.feedback ?? []);
-    }
-    void load();
+    fetch("/api/feedback")
+      .then((r) => r.json())
+      .then(setItems)
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) return <p className="text-slate-500">Loading...</p>;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">Feedback</h1>
-        <p className="mt-1 text-sm text-slate-600">Latest 100 feedback entries across campaigns.</p>
+        <h1 className="text-2xl font-semibold text-slate-900">All Feedback</h1>
+        <p className="mt-1 text-sm text-slate-500">Recent feedback across all VoiceAgents.</p>
       </div>
 
-      <Card>
+      {items.length === 0 ? (
+        <Card className="p-8 text-center text-slate-500">No feedback yet.</Card>
+      ) : (
         <div className="space-y-3">
-          {items.map((f) => (
-            <div key={f.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs text-slate-500">
-                {new Date(f.createdAt).toLocaleString()} • {f.source} •{" "}
-                {f.campaignId ? `campaign: ${f.campaignId}` : "campaign: —"}
+          {items.map((fb) => (
+            <Card key={fb.id} className="p-4">
+              <div className="flex justify-between text-xs text-slate-400 mb-2">
+                <div className="flex gap-2">
+                  <span>{fb.source}</span>
+                  {fb.voiceAgent && (
+                    <>
+                      <span>·</span>
+                      <Link
+                        href={`/voiceagents/${fb.voiceAgent.id}`}
+                        className="text-indigo-600 hover:underline"
+                      >
+                        {fb.voiceAgent.name}
+                      </Link>
+                    </>
+                  )}
+                </div>
+                <span>{new Date(fb.createdAt).toLocaleString()}</span>
               </div>
-              <div className="mt-2 whitespace-pre-wrap text-sm text-slate-800">{f.message}</div>
-            </div>
+              <p className="text-sm text-slate-700">{fb.message}</p>
+            </Card>
           ))}
-          {items.length === 0 && <div className="text-sm text-slate-600">No feedback yet.</div>}
         </div>
-      </Card>
+      )}
     </div>
   );
 }
-
-

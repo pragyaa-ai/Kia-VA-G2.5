@@ -1,47 +1,86 @@
 import { z } from "zod";
 
-export const CampaignCreateSchema = z.object({
-  name: z.string().min(1).max(120),
-  phoneNumber: z.string().min(3).max(32).optional(),
+// Voice name mapping (display name → internal name)
+export const VOICE_NAMES = {
+  ANANYA: "Ananya",
+  PRIYA: "Priya",
+  CHITRA: "Chitra",
+  KAVYA: "Kavya",
+  FARHAN: "Farhan",
+} as const;
+
+export const ACCENTS = {
+  INDIAN: "Indian",
+  AMERICAN: "American",
+  BRITISH: "British",
+} as const;
+
+export const LANGUAGES = {
+  ENGLISH: "English",
+  HINDI: "Hindi",
+} as const;
+
+export const ENGINE_LABELS = {
+  PRIMARY: "Primary",
+  SECONDARY: "Secondary",
+} as const;
+
+// ---------- VoiceAgent ----------
+export const createVoiceAgentSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  phoneNumber: z.string().optional(),
   engine: z.enum(["PRIMARY", "SECONDARY"]).default("PRIMARY"),
-  isActive: z.boolean().default(true)
+  greeting: z.string().min(1, "Greeting is required").max(500).default("Hello! Welcome to Kia. How can I help you today?"),
+  accent: z.enum(["INDIAN", "AMERICAN", "BRITISH"]).default("INDIAN"),
+  language: z.enum(["ENGLISH", "HINDI"]).default("ENGLISH"),
+  voiceName: z.enum(["ANANYA", "PRIYA", "CHITRA", "KAVYA", "FARHAN"]).default("ANANYA"),
+  isActive: z.boolean().default(true),
 });
 
-export const CampaignUpdateSchema = CampaignCreateSchema.partial().extend({
-  id: z.string().min(1)
-});
+export type CreateVoiceAgentInput = z.infer<typeof createVoiceAgentSchema>;
 
-export const FeedbackCreateSchema = z.object({
-  campaignId: z.string().min(1).optional(),
-  source: z.string().min(1).max(50).default("testing"),
-  message: z.string().min(1).max(4000)
-});
-
-export const CallFlowUpsertSchema = z.object({
-  greeting: z.string().min(1).max(8000),
+// ---------- Call Flow ----------
+export const updateCallFlowSchema = z.object({
+  greeting: z.string().min(1, "Greeting is required").max(2000),
   steps: z
     .array(
       z.object({
-        order: z.number().int().min(1).max(1000),
+        id: z.string().optional(),
+        order: z.number().int().min(0),
         title: z.string().min(1).max(200),
-        content: z.string().min(1).max(8000),
-        enabled: z.boolean().default(true)
+        content: z.string().min(1).max(5000),
+        enabled: z.boolean().default(true),
       })
     )
-    .max(200)
+    .optional(),
 });
 
-export const GuardrailCreateSchema = z.object({
-  name: z.string().min(1).max(120),
+export type UpdateCallFlowInput = z.infer<typeof updateCallFlowSchema>;
+
+// ---------- Guardrail ----------
+export const createGuardrailSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
-  ruleText: z.string().min(1).max(8000),
-  enabled: z.boolean().default(true)
+  ruleText: z.string().min(1, "Rule text is required").max(2000),
+  enabled: z.boolean().default(true),
 });
 
-export const VoiceProfileUpsertSchema = z.object({
-  voiceName: z.string().min(1).max(120),
-  accentNotes: z.string().max(4000).optional(),
-  settingsJson: z.any().optional()
+export type CreateGuardrailInput = z.infer<typeof createGuardrailSchema>;
+
+// ---------- Voice Profile ----------
+export const upsertVoiceProfileSchema = z.object({
+  voiceName: z.string().min(1).max(50),
+  accentNotes: z.string().max(1000).optional(),
+  settingsJson: z.any().optional(),
 });
 
+export type UpsertVoiceProfileInput = z.infer<typeof upsertVoiceProfileSchema>;
 
+// ---------- Feedback ----------
+export const createFeedbackSchema = z.object({
+  voiceAgentId: z.string().optional(),
+  source: z.string().max(50).default("testing"),
+  message: z.string().min(1, "Feedback message is required").max(5000),
+});
+
+export type CreateFeedbackInput = z.infer<typeof createFeedbackSchema>;

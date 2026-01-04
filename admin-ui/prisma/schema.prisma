@@ -13,14 +13,42 @@ enum VoiceAgentEngine {
   SECONDARY
 }
 
-model Campaign {
-  id            String      @id @default(cuid())
+enum Accent {
+  INDIAN
+  AMERICAN
+  BRITISH
+}
+
+enum Language {
+  ENGLISH
+  HINDI
+}
+
+// Voice names mapped to Indian names (internal Gemini mapping hidden)
+// Ananya=Aoede, Priya=Puck, Chitra=Charon, Kavya=Kore, Farhan=Fenrir
+enum VoiceName {
+  ANANYA
+  PRIYA
+  CHITRA
+  KAVYA
+  FARHAN
+}
+
+model VoiceAgent {
+  id            String            @id @default(cuid())
   name          String
   phoneNumber   String?
   engine        VoiceAgentEngine  @default(PRIMARY)
-  isActive      Boolean     @default(true)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  isActive      Boolean           @default(true)
+
+  // Key configurable parameters
+  greeting      String            @default("Hello! Welcome to Kia. How can I help you today?")
+  accent        Accent            @default(INDIAN)
+  language      Language          @default(ENGLISH)
+  voiceName     VoiceName         @default(ANANYA)
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   callFlow      CallFlow?
   guardrails    Guardrail[]
@@ -33,14 +61,14 @@ model Campaign {
 }
 
 model CallFlow {
-  id          String    @id @default(cuid())
-  campaignId  String    @unique
-  greeting    String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  voiceAgentId  String    @unique
+  greeting      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  steps       CallFlowStep[]
+  voiceAgent    VoiceAgent  @relation(fields: [voiceAgentId], references: [id], onDelete: Cascade)
+  steps         CallFlowStep[]
 }
 
 model CallFlowStep {
@@ -60,62 +88,62 @@ model CallFlowStep {
 }
 
 model Guardrail {
-  id          String    @id @default(cuid())
-  campaignId  String
-  name        String
-  description String?
-  ruleText    String
-  enabled     Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String      @id @default(cuid())
+  voiceAgentId  String
+  name          String
+  description   String?
+  ruleText      String
+  enabled       Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  voiceAgent    VoiceAgent  @relation(fields: [voiceAgentId], references: [id], onDelete: Cascade)
 
-  @@index([campaignId])
+  @@index([voiceAgentId])
   @@index([enabled])
 }
 
 model VoiceProfile {
-  id            String    @id @default(cuid())
-  campaignId    String    @unique
+  id            String      @id @default(cuid())
+  voiceAgentId  String      @unique
   voiceName     String
   accentNotes   String?
   settingsJson  Json?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  voiceAgent    VoiceAgent  @relation(fields: [voiceAgentId], references: [id], onDelete: Cascade)
 }
 
 model Feedback {
-  id          String    @id @default(cuid())
-  campaignId  String?
-  source      String    @default("testing")
-  message     String
-  createdAt   DateTime  @default(now())
+  id            String      @id @default(cuid())
+  voiceAgentId  String?
+  source        String      @default("testing")
+  message       String
+  createdAt     DateTime    @default(now())
 
-  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  voiceAgent    VoiceAgent? @relation(fields: [voiceAgentId], references: [id], onDelete: SetNull)
 
-  @@index([campaignId])
+  @@index([voiceAgentId])
   @@index([createdAt])
 }
 
 model CallSession {
-  id            String      @id @default(cuid())
-  campaignId    String?
+  id            String            @id @default(cuid())
+  voiceAgentId  String?
   engine        VoiceAgentEngine  @default(PRIMARY)
-  direction     String      @default("inbound")
+  direction     String            @default("inbound")
   fromNumber    String?
   toNumber      String?
-  startedAt     DateTime    @default(now())
+  startedAt     DateTime          @default(now())
   endedAt       DateTime?
   durationSec   Int?
-  minutesBilled Decimal?    @db.Decimal(10, 2)
+  minutesBilled Decimal?          @db.Decimal(10, 2)
   metaJson      Json?
 
-  campaign      Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  voiceAgent    VoiceAgent?       @relation(fields: [voiceAgentId], references: [id], onDelete: SetNull)
 
-  @@index([campaignId])
+  @@index([voiceAgentId])
   @@index([startedAt])
   @@index([engine])
 }
@@ -172,5 +200,3 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
-
-

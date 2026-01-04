@@ -1,71 +1,60 @@
 import Link from "next/link";
-import { prisma } from "@/src/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
-export default async function DashboardPage() {
-  const [campaignsTotal, campaignsActive, feedbackRecent, sessionsRecent] = await Promise.all([
-    prisma.campaign.count(),
-    prisma.campaign.count({ where: { isActive: true } }),
-    prisma.feedback.count({ where: { createdAt: { gte: new Date(Date.now() - 7 * 86400 * 1000) } } }),
-    prisma.callSession.count({ where: { startedAt: { gte: new Date(Date.now() - 7 * 86400 * 1000) } } })
-  ]);
-
+export default function DashboardPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            A clean overview of configuration and usage.
-          </p>
-        </div>
-        <Link href="/campaigns/new">
-          <Button>New campaign</Button>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Welcome to the VoiceAgent Admin. Manage your VoiceAgents, call flows, and track usage.
+        </p>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <Link href="/voiceagents">
+          <Card className="p-6 hover:shadow-md transition cursor-pointer">
+            <h3 className="font-medium text-slate-900">VoiceAgents</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Configure greeting, voice, accent, and call flows.
+            </p>
+          </Card>
+        </Link>
+
+        <Link href="/feedback">
+          <Card className="p-6 hover:shadow-md transition cursor-pointer">
+            <h3 className="font-medium text-slate-900">Feedback</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Review testing feedback and improve behavior.
+            </p>
+          </Card>
+        </Link>
+
+        <Link href="/usage">
+          <Card className="p-6 hover:shadow-md transition cursor-pointer">
+            <h3 className="font-medium text-slate-900">Usage</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Track calls and minutes across all VoiceAgents.
+            </p>
+          </Card>
         </Link>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card title="Campaigns">
-          <div className="text-3xl font-semibold text-slate-900">{campaignsTotal}</div>
-          <div className="mt-1 text-sm text-slate-600">{campaignsActive} active</div>
-        </Card>
-        <Card title="Calls (last 7d)">
-          <div className="text-3xl font-semibold text-slate-900">{sessionsRecent}</div>
-          <div className="mt-1 text-sm text-slate-600">Telephony + UI sessions</div>
-        </Card>
-        <Card title="Feedback (last 7d)">
-          <div className="text-3xl font-semibold text-slate-900">{feedbackRecent}</div>
-          <div className="mt-1 text-sm text-slate-600">Testing notes & issues</div>
-        </Card>
-        <Card title="Engine switching">
-          <div className="text-sm text-slate-600">
-            Set per campaign. Default: <span className="font-medium text-slate-900">Primary</span>
-          </div>
-        </Card>
-      </div>
-
-      <Card
-        title="What you can do here"
-        description="Everything is organized per campaign (number/case) so the UI stays intuitive."
-      >
-        <ul className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-          <li>
-            - Create/edit call flows (greeting + steps)
-          </li>
-          <li>
-            - Add guardrails
-          </li>
-          <li>
-            - Tune voice profile (voice + accent notes)
-          </li>
-          <li>
-            - Track calls and minutes
-          </li>
-        </ul>
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-2">Quick Start</h2>
+        <p className="text-sm text-slate-600 mb-4">
+          Create a new VoiceAgent or configure your existing Kia VoiceAgent.
+        </p>
+        <div className="flex gap-3">
+          <Link href="/voiceagents/new">
+            <Button>+ New VoiceAgent</Button>
+          </Link>
+          <Link href="/voiceagents">
+            <Button variant="secondary">View All</Button>
+          </Link>
+        </div>
       </Card>
     </div>
   );
 }
-
-
