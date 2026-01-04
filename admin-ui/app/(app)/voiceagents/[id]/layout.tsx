@@ -9,6 +9,7 @@ const tabs = [
   { segment: "/callflow", label: "Call Flow" },
   { segment: "/guardrails", label: "Guardrails" },
   { segment: "/voice", label: "Voice" },
+  { segment: "/telephony", label: "Telephony" },
   { segment: "/feedback", label: "Feedback" },
   { segment: "/usage", label: "Usage" },
 ];
