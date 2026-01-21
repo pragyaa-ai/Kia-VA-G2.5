@@ -105,6 +105,8 @@ async def _gemini_reader(
                 }
                 if session.client_ws.open:
                     await session.client_ws.send(json.dumps(payload))
+                    if cfg.DEBUG:
+                        print(f"[{session.ucid}] 🔊 Sent {len(chunk)} samples to telephony")
     except Exception as e:
         if cfg.DEBUG:
             print(f"[{session.ucid}] ❌ Gemini reader error: {e}")
@@ -211,6 +213,8 @@ async def handle_client(client_ws, path: str):
 
                 session.input_buffer.extend(samples)
 
+                # Track audio chunks sent to Gemini
+                chunks_sent = 0
                 while len(session.input_buffer) >= cfg.AUDIO_BUFFER_SAMPLES_INPUT:
                     chunk = session.input_buffer[: cfg.AUDIO_BUFFER_SAMPLES_INPUT]
                     session.input_buffer = session.input_buffer[cfg.AUDIO_BUFFER_SAMPLES_INPUT :]
@@ -218,6 +222,10 @@ async def handle_client(client_ws, path: str):
                     samples_np = audio_processor.waybeo_samples_to_np(chunk)
                     audio_b64 = audio_processor.process_input_8k_to_gemini_16k_b64(samples_np)
                     await session.gemini.send_audio_b64_pcm16(audio_b64)
+                    chunks_sent += 1
+
+                if cfg.DEBUG and chunks_sent > 0:
+                    print(f"[{session.ucid}] 🎤 Sent {chunks_sent} audio chunk(s) to Gemini ({len(samples)} samples received)")
 
         gemini_task.cancel()
         try:
