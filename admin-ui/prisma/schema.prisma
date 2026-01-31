@@ -37,15 +37,19 @@ enum VoiceName {
 model VoiceAgent {
   id            String            @id @default(cuid())
   name          String
+  slug          String            @unique  // e.g. "spotlight", "tata", "skoda" - used by telephony
   phoneNumber   String?
   engine        VoiceAgentEngine  @default(PRIMARY)
   isActive      Boolean           @default(true)
 
   // Key configurable parameters
-  greeting      String            @default("Hello! Welcome to Kia. How can I help you today?")
+  greeting      String            @default("Hello! Welcome. How can I help you today?")
   accent        Accent            @default(INDIAN)
-  language      Language          @default(ENGLISH)
+  language      Language          @default(HINDI)
   voiceName     VoiceName         @default(ANANYA)
+  
+  // Full system instructions for the VoiceAgent (used by telephony)
+  systemInstructions  String?     @db.Text
 
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
@@ -58,6 +62,7 @@ model VoiceAgent {
 
   @@index([isActive])
   @@index([phoneNumber])
+  @@index([slug])
 }
 
 model CallFlow {

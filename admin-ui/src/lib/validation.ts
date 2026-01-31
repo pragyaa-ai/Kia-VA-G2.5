@@ -28,13 +28,15 @@ export const ENGINE_LABELS = {
 // ---------- VoiceAgent ----------
 export const createVoiceAgentSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
+  slug: z.string().min(1, "Slug is required").max(50).regex(/^[a-z0-9_-]+$/, "Slug must be lowercase alphanumeric with dashes/underscores"),
   phoneNumber: z.string().optional(),
   engine: z.enum(["PRIMARY", "SECONDARY"]).default("PRIMARY"),
-  greeting: z.string().min(1, "Greeting is required").max(500).default("Hello! Welcome to Kia. How can I help you today?"),
+  greeting: z.string().min(1, "Greeting is required").max(500).default("Namaste! Aapka swagat hai. Main aapki kya madad kar sakti hoon?"),
   accent: z.enum(["INDIAN", "AMERICAN", "BRITISH"]).default("INDIAN"),
-  language: z.enum(["ENGLISH", "HINDI"]).default("ENGLISH"),
+  language: z.enum(["ENGLISH", "HINDI"]).default("HINDI"),
   voiceName: z.enum(["ANANYA", "PRIYA", "CHITRA", "KAVYA", "FARHAN"]).default("ANANYA"),
   isActive: z.boolean().default(true),
+  systemInstructions: z.string().max(50000).optional(),
 });
 
 export type CreateVoiceAgentInput = z.infer<typeof createVoiceAgentSchema>;

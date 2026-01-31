@@ -6,6 +6,7 @@ import { ReactNode } from "react";
 
 const tabs = [
   { segment: "", label: "Overview" },
+  { segment: "/instructions", label: "Instructions" },
   { segment: "/callflow", label: "Call Flow" },
   { segment: "/guardrails", label: "Guardrails" },
   { segment: "/voice", label: "Voice" },

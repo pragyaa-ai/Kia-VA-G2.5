@@ -10,6 +10,10 @@ Client sends JSON messages with:
 This service bridges telephony audio to Gemini Live:
 - Waybeo 8kHz -> resample -> Gemini 16kHz PCM16 base64
 - Gemini audio output (assumed 24kHz PCM16 base64) -> resample -> Waybeo 8kHz samples
+
+Multi-agent support:
+- Routes to different prompts based on ?agent=xxx query parameter
+- Supported agents: spotlight (Kia), tata, skoda
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ import json
 import os
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse, parse_qs
 
 import websockets
 from websockets.exceptions import ConnectionClosed
@@ -38,14 +43,73 @@ class TelephonySession:
     closed: bool = False
 
 
-def _read_prompt_text() -> str:
-    prompt_file = os.getenv("PROMPT_FILE", os.path.join(os.path.dirname(__file__), "kia_prompt.txt"))
+# Supported agents and their prompt files (fallback if API unavailable)
+AGENT_PROMPTS = {
+    "spotlight": "kia_prompt.txt",
+    "tata": "tata_prompt.txt",
+    "skoda": "skoda_prompt.txt",
+}
+
+VALID_AGENTS = set(AGENT_PROMPTS.keys())
+
+# Admin UI API URL for fetching prompts (runs on same VM)
+ADMIN_API_BASE = os.getenv("ADMIN_API_BASE", "http://127.0.0.1:3100")
+
+
+def _fetch_prompt_from_api(agent: str) -> Optional[str]:
+    """
+    Fetch system instructions from Admin UI API.
+    Returns None if API is unavailable or agent not found.
+    """
+    import urllib.request
+    import urllib.error
+    
+    url = f"{ADMIN_API_BASE}/api/telephony/prompt/{agent.lower()}"
+    try:
+        req = urllib.request.Request(url, method="GET")
+        req.add_header("Accept", "application/json")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                instructions = data.get("systemInstructions", "")
+                if instructions and instructions.strip():
+                    print(f"[telephony] ✅ Loaded prompt from API for agent: {agent}")
+                    return instructions
+    except urllib.error.HTTPError as e:
+        print(f"[telephony] ⚠️ API error for {agent}: HTTP {e.code}")
+    except Exception as e:
+        print(f"[telephony] ⚠️ API unavailable for {agent}: {e}")
+    return None
+
+
+def _read_prompt_from_file(agent: str) -> str:
+    """Load prompt from local .txt file (fallback)."""
+    agent_lower = agent.lower()
+    prompt_filename = AGENT_PROMPTS.get(agent_lower, "kia_prompt.txt")
+    prompt_file = os.path.join(os.path.dirname(__file__), prompt_filename)
+    
     try:
         with open(prompt_file, "r", encoding="utf-8") as f:
+            print(f"[telephony] 📄 Loaded prompt from file: {prompt_filename}")
             return f.read()
+    except FileNotFoundError:
+        return f"You are a helpful {agent} sales assistant. Be concise and friendly."
     except Exception:
-        # fallback: minimal prompt if file missing
-        return "You are a helpful Kia Motors sales assistant. Be concise and friendly."
+        return "You are a helpful sales assistant. Be concise and friendly."
+
+
+def _read_prompt_text(agent: str = "spotlight") -> str:
+    """
+    Load prompt for the specified agent.
+    Priority: 1) Admin UI API (database), 2) Local .txt file (fallback)
+    """
+    # Try API first (allows editing via Admin UI)
+    api_prompt = _fetch_prompt_from_api(agent)
+    if api_prompt:
+        return api_prompt
+    
+    # Fallback to local file
+    return _read_prompt_from_file(agent)
 
 
 def _extract_audio_b64_from_gemini_message(msg: Dict[str, Any]) -> Optional[str]:
@@ -118,7 +182,12 @@ async def handle_client(client_ws, path: str):
 
     # websockets passes the request path including querystring (e.g. "/wsNew1?agent=spotlight").
     # Waybeo/Ozonetel commonly append query params; accept those as long as the base path matches.
-    base_path = (path or "").split("?", 1)[0]
+    parsed_url = urlparse(path or "")
+    base_path = parsed_url.path
+    query_params = parse_qs(parsed_url.query)
+    
+    # Extract agent parameter (default to "spotlight" for Kia)
+    agent = query_params.get("agent", ["spotlight"])[0]
 
     # Only accept configured base path (e.g. /ws or /wsNew1)
     if base_path != cfg.WS_PATH:
@@ -129,6 +198,15 @@ async def handle_client(client_ws, path: str):
         await client_ws.close(code=1008, reason="Invalid path")
         return
 
+    # Strict validation: reject unknown agents
+    if agent.lower() not in VALID_AGENTS:
+        print(f"[telephony] ❌ Rejecting unknown agent: {agent!r} (valid: {VALID_AGENTS})")
+        await client_ws.close(code=1008, reason=f"Unknown agent: {agent}")
+        return
+
+    if cfg.DEBUG:
+        print(f"[telephony] 🎯 Agent: {agent}")
+
     rates = AudioRates(
         telephony_sr=cfg.TELEPHONY_SR,
         gemini_input_sr=cfg.GEMINI_INPUT_SR,
@@ -136,7 +214,7 @@ async def handle_client(client_ws, path: str):
     )
     audio_processor = AudioProcessor(rates)
 
-    prompt = _read_prompt_text()
+    prompt = _read_prompt_text(agent)
 
     service_url = (
         "wss://us-central1-aiplatform.googleapis.com/ws/"
@@ -150,8 +228,8 @@ async def handle_client(client_ws, path: str):
         enable_affective_dialog=True,
         enable_input_transcription=False,
         enable_output_transcription=False,
-        vad_silence_ms=300,
-        vad_prefix_ms=400,
+        vad_silence_ms=500,   # Increased from 300ms for better noise tolerance
+        vad_prefix_ms=500,    # Increased from 400ms for better noise tolerance
         activity_handling="START_OF_ACTIVITY_INTERRUPTS",
     )
 
