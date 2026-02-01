@@ -60,6 +60,9 @@ interface Analytics {
     negative: number;
     unknown: number;
   };
+  storeCodeDistribution?: Record<string, number>;
+  carModelDistribution?: Record<string, number>;
+  testDriveDistribution?: { yes: number; no: number; unknown: number };
 }
 
 interface RecentCall {
@@ -97,6 +100,11 @@ export default function VoiceAgentOverviewPage() {
   const [saving, setSaving] = useState(false);
   const [period, setPeriod] = useState("30d");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
+  const [filters, setFilters] = useState({
+    storeCode: "",
+    carModel: "",
+    testDrive: "",
+  });
   const [form, setForm] = useState({
     name: "",
     phoneNumber: "",
@@ -110,15 +118,24 @@ export default function VoiceAgentOverviewPage() {
 
   useEffect(() => {
     // Build analytics URL with period or custom date range
-    let analyticsUrl = `/api/voiceagents/${params.id}/analytics?period=${period}`;
+    const urlParams = new URLSearchParams();
     if (period === "custom" && customRange.start && customRange.end) {
-      analyticsUrl = `/api/voiceagents/${params.id}/analytics?startDate=${customRange.start}&endDate=${customRange.end}`;
+      urlParams.set("startDate", customRange.start);
+      urlParams.set("endDate", customRange.end);
+    } else {
+      urlParams.set("period", period);
     }
+    if (filters.storeCode) urlParams.set("storeCode", filters.storeCode);
+    if (filters.carModel) urlParams.set("carModel", filters.carModel);
+    if (filters.testDrive) urlParams.set("testDrive", filters.testDrive);
+
+    const analyticsUrl = `/api/voiceagents/${params.id}/analytics?${urlParams}`;
+    const callsUrl = `/api/voiceagents/${params.id}/calls?limit=5&${urlParams}`;
 
     Promise.all([
       fetch(`/api/voiceagents/${params.id}`).then((r) => r.json()),
       fetch(analyticsUrl).then((r) => r.json()),
-      fetch(`/api/voiceagents/${params.id}/calls?limit=5`).then((r) => r.json()),
+      fetch(callsUrl).then((r) => r.json()),
     ])
       .then(([agentData, analyticsData, callsData]) => {
         setAgent(agentData);
@@ -136,7 +153,7 @@ export default function VoiceAgentOverviewPage() {
         });
       })
       .finally(() => setLoading(false));
-  }, [params.id, period, customRange.start, customRange.end]);
+  }, [params.id, period, customRange.start, customRange.end, filters.storeCode, filters.carModel, filters.testDrive]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -265,6 +282,58 @@ export default function VoiceAgentOverviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Filters Row */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Store Code</label>
+            <select
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm min-w-[140px]"
+              value={filters.storeCode}
+              onChange={(e) => setFilters({ ...filters, storeCode: e.target.value })}
+            >
+              <option value="">All Stores</option>
+              {analytics?.storeCodeDistribution && Object.keys(analytics.storeCodeDistribution).map((code) => (
+                <option key={code} value={code}>{code} ({analytics.storeCodeDistribution?.[code]})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Car Model</label>
+            <select
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm min-w-[140px]"
+              value={filters.carModel}
+              onChange={(e) => setFilters({ ...filters, carModel: e.target.value })}
+            >
+              <option value="">All Models</option>
+              {analytics?.carModelDistribution && Object.keys(analytics.carModelDistribution).map((model) => (
+                <option key={model} value={model}>{model} ({analytics.carModelDistribution?.[model]})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Test Drive</label>
+            <select
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm min-w-[120px]"
+              value={filters.testDrive}
+              onChange={(e) => setFilters({ ...filters, testDrive: e.target.value })}
+            >
+              <option value="">All</option>
+              <option value="yes">Yes ({analytics?.testDriveDistribution?.yes || 0})</option>
+              <option value="no">No ({analytics?.testDriveDistribution?.no || 0})</option>
+            </select>
+          </div>
+          {(filters.storeCode || filters.carModel || filters.testDrive) && (
+            <button
+              onClick={() => setFilters({ storeCode: "", carModel: "", testDrive: "" })}
+              className="text-sm text-slate-500 hover:text-slate-700 px-2 py-2"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      </Card>
 
       {/* Stats Cards Row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -395,31 +464,142 @@ export default function VoiceAgentOverviewPage() {
         <Card className="p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">Call Outcomes</h3>
           {outcomeData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={outcomeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={4}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
-                >
-                  {outcomeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={outcomeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {outcomeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-3 mt-2">
+                {outcomeData.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-1.5 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                    <span className="text-slate-600">{entry.name}</span>
+                    <span className="font-medium text-slate-900">{entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="flex items-center justify-center h-64 text-slate-400">
               No outcome data available
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Additional Charts Row */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Store Code Distribution */}
+        <Card className="p-6">
+          <h3 className="text-sm font-semibold text-slate-900 mb-4">By Store Code</h3>
+          {analytics?.storeCodeDistribution && Object.keys(analytics.storeCodeDistribution).length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart 
+                data={Object.entries(analytics.storeCodeDistribution).map(([name, value]) => ({ name, value }))}
+                layout="vertical"
+                margin={{ left: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} width={55} />
+                <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }} />
+                <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
+              No store data available
+            </div>
+          )}
+        </Card>
+
+        {/* Car Model Distribution */}
+        <Card className="p-6">
+          <h3 className="text-sm font-semibold text-slate-900 mb-4">By Car Model</h3>
+          {analytics?.carModelDistribution && Object.keys(analytics.carModelDistribution).length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart 
+                data={Object.entries(analytics.carModelDistribution).slice(0, 6).map(([name, value]) => ({ name, value }))}
+                layout="vertical"
+                margin={{ left: 80 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} width={75} />
+                <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }} />
+                <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
+              No car model data available
+            </div>
+          )}
+        </Card>
+
+        {/* Test Drive Distribution */}
+        <Card className="p-6">
+          <h3 className="text-sm font-semibold text-slate-900 mb-4">Test Drive Interest</h3>
+          {analytics?.testDriveDistribution && (analytics.testDriveDistribution.yes > 0 || analytics.testDriveDistribution.no > 0) ? (
+            <div>
+              <ResponsiveContainer width="100%" height={160}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: "Yes", value: analytics.testDriveDistribution.yes, color: "#10b981" },
+                      { name: "No", value: analytics.testDriveDistribution.no, color: "#ef4444" },
+                      { name: "Unknown", value: analytics.testDriveDistribution.unknown, color: "#cbd5e1" },
+                    ].filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={65}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {[
+                      { color: "#10b981" },
+                      { color: "#ef4444" },
+                      { color: "#cbd5e1" },
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex justify-center gap-4 mt-2">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span className="text-slate-600">Yes</span>
+                  <span className="font-medium text-slate-900">{analytics.testDriveDistribution.yes}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                  <span className="text-slate-600">No</span>
+                  <span className="font-medium text-slate-900">{analytics.testDriveDistribution.no}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
+              No test drive data available
             </div>
           )}
         </Card>

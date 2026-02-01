@@ -47,6 +47,9 @@ export default function CallsListPage() {
     sentiment: searchParams.get("sentiment") || "",
     startDate: searchParams.get("startDate") || "",
     endDate: searchParams.get("endDate") || "",
+    storeCode: searchParams.get("storeCode") || "",
+    carModel: searchParams.get("carModel") || "",
+    testDrive: searchParams.get("testDrive") || "",
   });
 
   const page = parseInt(searchParams.get("page") || "1", 10);
@@ -61,6 +64,9 @@ export default function CallsListPage() {
     if (filters.sentiment) queryParams.set("sentiment", filters.sentiment);
     if (filters.startDate) queryParams.set("startDate", filters.startDate);
     if (filters.endDate) queryParams.set("endDate", filters.endDate);
+    if (filters.storeCode) queryParams.set("storeCode", filters.storeCode);
+    if (filters.carModel) queryParams.set("carModel", filters.carModel);
+    if (filters.testDrive) queryParams.set("testDrive", filters.testDrive);
 
     const res = await fetch(`/api/voiceagents/${params.id}/calls?${queryParams}`);
     const data = await res.json();
@@ -135,11 +141,14 @@ export default function CallsListPage() {
     if (filters.sentiment) queryParams.set("sentiment", filters.sentiment);
     if (filters.startDate) queryParams.set("startDate", filters.startDate);
     if (filters.endDate) queryParams.set("endDate", filters.endDate);
+    if (filters.storeCode) queryParams.set("storeCode", filters.storeCode);
+    if (filters.carModel) queryParams.set("carModel", filters.carModel);
+    if (filters.testDrive) queryParams.set("testDrive", filters.testDrive);
     router.push(`/voiceagents/${params.id}/calls?${queryParams}`);
   };
 
   const clearFilters = () => {
-    setFilters({ outcome: "", sentiment: "", startDate: "", endDate: "" });
+    setFilters({ outcome: "", sentiment: "", startDate: "", endDate: "", storeCode: "", carModel: "", testDrive: "" });
     router.push(`/voiceagents/${params.id}/calls`);
   };
 
@@ -161,6 +170,38 @@ export default function CallsListPage() {
       {/* Filters */}
       <Card className="p-4">
         <div className="flex flex-wrap items-end gap-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Store Code</label>
+            <input
+              type="text"
+              placeholder="e.g. 10001"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm w-24"
+              value={filters.storeCode}
+              onChange={(e) => setFilters({ ...filters, storeCode: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Car Model</label>
+            <input
+              type="text"
+              placeholder="e.g. Seltos"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm w-28"
+              value={filters.carModel}
+              onChange={(e) => setFilters({ ...filters, carModel: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Test Drive</label>
+            <select
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              value={filters.testDrive}
+              onChange={(e) => setFilters({ ...filters, testDrive: e.target.value })}
+            >
+              <option value="">All</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Outcome</label>
             <select
@@ -206,7 +247,7 @@ export default function CallsListPage() {
               onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
             />
           </div>
-          <Button onClick={applyFilters}>Apply Filters</Button>
+          <Button onClick={applyFilters}>Apply</Button>
           <button
             onClick={clearFilters}
             className="text-sm text-slate-500 hover:text-slate-700"

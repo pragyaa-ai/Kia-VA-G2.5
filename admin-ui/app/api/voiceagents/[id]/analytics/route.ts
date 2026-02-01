@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+interface ExtractedData {
+  car_model?: string;
+  test_drive_interest?: string;
+}
+
+interface PayloadData {
+  store_code?: string | number;
+}
+
 /**
  * GET /api/voiceagents/[id]/analytics
  * Get aggregated analytics for charts
@@ -9,6 +18,9 @@ import { prisma } from "@/lib/prisma";
  * - period: "today" | "7d" | "30d" | "90d" | "all" (default: "30d")
  * - startDate: ISO date string for custom range
  * - endDate: ISO date string for custom range
+ * - storeCode: Filter by store code
+ * - carModel: Filter by car model
+ * - testDrive: Filter by test drive interest (yes/no)
  */
 export async function GET(
   request: NextRequest,
@@ -19,6 +31,9 @@ export async function GET(
     const period = searchParams.get("period") || "30d";
     const customStartDate = searchParams.get("startDate");
     const customEndDate = searchParams.get("endDate");
+    const filterStoreCode = searchParams.get("storeCode");
+    const filterCarModel = searchParams.get("carModel");
+    const filterTestDrive = searchParams.get("testDrive");
 
     // Calculate date range
     let startDate: Date | undefined;
@@ -67,7 +82,7 @@ export async function GET(
       }
     }
 
-    // Get all calls in period
+    // Get all calls in period with extended data
     const calls = await prisma.callSession.findMany({
       where,
       select: {
@@ -77,14 +92,86 @@ export async function GET(
         minutesBilled: true,
         outcome: true,
         sentiment: true,
+        extractedData: true,
+        payloadJson: true,
       },
       orderBy: { startedAt: "asc" },
     });
 
-    // Aggregate by date
+    // Extract store codes, car models, test drive from calls
+    const processedCalls = calls.map((call) => {
+      const extracted = call.extractedData as unknown as ExtractedData | null;
+      const payload = call.payloadJson as unknown as PayloadData | null;
+      
+      return {
+        ...call,
+        storeCode: payload?.store_code?.toString() || null,
+        carModel: extracted?.car_model || null,
+        testDrive: extracted?.test_drive_interest?.toLowerCase() || null,
+      };
+    });
+
+    // Apply filters
+    let filteredCalls = processedCalls;
+    
+    if (filterStoreCode) {
+      filteredCalls = filteredCalls.filter((c) => c.storeCode === filterStoreCode);
+    }
+    if (filterCarModel) {
+      filteredCalls = filteredCalls.filter((c) => c.carModel === filterCarModel);
+    }
+    if (filterTestDrive) {
+      filteredCalls = filteredCalls.filter((c) => {
+        if (filterTestDrive === "yes") {
+          return c.testDrive && ["yes", "sure", "definitely", "maybe", "later", "हाँ", "शायद", "ठीक है"].some(
+            (v) => c.testDrive?.includes(v)
+          );
+        }
+        if (filterTestDrive === "no") {
+          return c.testDrive && ["no", "not", "नहीं", "अभी नहीं"].some(
+            (v) => c.testDrive?.includes(v)
+          );
+        }
+        return true;
+      });
+    }
+
+    // Calculate distributions from ALL calls (before filters) for filter dropdowns
+    const storeCodeDistribution: Record<string, number> = {};
+    const carModelDistribution: Record<string, number> = {};
+    const testDriveDistribution = { yes: 0, no: 0, unknown: 0 };
+
+    for (const call of processedCalls) {
+      // Store code
+      if (call.storeCode) {
+        storeCodeDistribution[call.storeCode] = (storeCodeDistribution[call.storeCode] || 0) + 1;
+      }
+      
+      // Car model
+      if (call.carModel) {
+        carModelDistribution[call.carModel] = (carModelDistribution[call.carModel] || 0) + 1;
+      }
+      
+      // Test drive
+      if (call.testDrive) {
+        const isYes = ["yes", "sure", "definitely", "maybe", "later", "हाँ", "शायद", "ठीक है"].some(
+          (v) => call.testDrive?.includes(v)
+        );
+        const isNo = ["no", "not", "नहीं", "अभी नहीं"].some(
+          (v) => call.testDrive?.includes(v)
+        );
+        if (isYes) testDriveDistribution.yes++;
+        else if (isNo) testDriveDistribution.no++;
+        else testDriveDistribution.unknown++;
+      } else {
+        testDriveDistribution.unknown++;
+      }
+    }
+
+    // Aggregate by date (using filtered calls)
     const callsByDate: Record<string, { calls: number; minutes: number }> = {};
     
-    for (const call of calls) {
+    for (const call of filteredCalls) {
       const dateKey = call.startedAt.toISOString().split("T")[0];
       if (!callsByDate[dateKey]) {
         callsByDate[dateKey] = { calls: 0, minutes: 0 };
@@ -102,27 +189,27 @@ export async function GET(
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Calculate outcome distribution
+    // Calculate outcome distribution (filtered)
     const outcomeDistribution = {
-      complete: calls.filter((c) => c.outcome === "COMPLETE").length,
-      partial: calls.filter((c) => c.outcome === "PARTIAL").length,
-      incomplete: calls.filter((c) => c.outcome === "INCOMPLETE").length,
-      transferred: calls.filter((c) => c.outcome === "TRANSFERRED").length,
+      complete: filteredCalls.filter((c) => c.outcome === "COMPLETE").length,
+      partial: filteredCalls.filter((c) => c.outcome === "PARTIAL").length,
+      incomplete: filteredCalls.filter((c) => c.outcome === "INCOMPLETE").length,
+      transferred: filteredCalls.filter((c) => c.outcome === "TRANSFERRED").length,
     };
 
-    // Calculate sentiment distribution
+    // Calculate sentiment distribution (filtered)
     const sentimentDistribution = {
-      positive: calls.filter((c) => c.sentiment === "POSITIVE").length,
-      neutral: calls.filter((c) => c.sentiment === "NEUTRAL").length,
-      negative: calls.filter((c) => c.sentiment === "NEGATIVE").length,
-      unknown: calls.filter((c) => !c.sentiment).length,
+      positive: filteredCalls.filter((c) => c.sentiment === "POSITIVE").length,
+      neutral: filteredCalls.filter((c) => c.sentiment === "NEUTRAL").length,
+      negative: filteredCalls.filter((c) => c.sentiment === "NEGATIVE").length,
+      unknown: filteredCalls.filter((c) => !c.sentiment).length,
     };
 
-    // Calculate summary stats
-    const totalCalls = calls.length;
-    const totalMinutes = calls.reduce((acc, c) => acc + Number(c.minutesBilled || 0), 0);
+    // Calculate summary stats (filtered)
+    const totalCalls = filteredCalls.length;
+    const totalMinutes = filteredCalls.reduce((acc, c) => acc + Number(c.minutesBilled || 0), 0);
     const avgDuration = totalCalls > 0
-      ? calls.reduce((acc, c) => acc + (c.durationSec || 0), 0) / totalCalls
+      ? filteredCalls.reduce((acc, c) => acc + (c.durationSec || 0), 0) / totalCalls
       : 0;
     const dataCaptureRate = totalCalls > 0
       ? ((outcomeDistribution.complete + outcomeDistribution.partial) / totalCalls) * 100
@@ -158,6 +245,9 @@ export async function GET(
       chartData,
       outcomeDistribution,
       sentimentDistribution,
+      storeCodeDistribution,
+      carModelDistribution,
+      testDriveDistribution,
       period,
     });
   } catch (error) {

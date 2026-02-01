@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+interface ExtractedData {
+  full_name?: string;
+  car_model?: string;
+  email_id?: string;
+  test_drive_interest?: string;
+}
+
+interface PayloadData {
+  store_code?: string | number;
+}
+
 /**
  * GET /api/voiceagents/[id]/calls
  * List calls for a VoiceAgent with filtering, pagination, and date range
@@ -12,6 +23,9 @@ import { prisma } from "@/lib/prisma";
  * - endDate: ISO date string
  * - outcome: COMPLETE | PARTIAL | INCOMPLETE | TRANSFERRED
  * - sentiment: POSITIVE | NEUTRAL | NEGATIVE
+ * - storeCode: Filter by store code
+ * - carModel: Filter by car model
+ * - testDrive: Filter by test drive interest (yes/no)
  */
 export async function GET(
   request: NextRequest,
@@ -25,10 +39,11 @@ export async function GET(
     const endDate = searchParams.get("endDate");
     const outcome = searchParams.get("outcome");
     const sentiment = searchParams.get("sentiment");
+    const filterStoreCode = searchParams.get("storeCode");
+    const filterCarModel = searchParams.get("carModel");
+    const filterTestDrive = searchParams.get("testDrive");
 
-    const skip = (page - 1) * limit;
-
-    // Build where clause
+    // Build where clause for basic filters
     const where: Record<string, unknown> = {
       voiceAgentId: params.id,
     };
@@ -40,7 +55,9 @@ export async function GET(
         (where.startedAt as Record<string, Date>).gte = new Date(startDate);
       }
       if (endDate) {
-        (where.startedAt as Record<string, Date>).lte = new Date(endDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        (where.startedAt as Record<string, Date>).lte = end;
       }
     }
 
@@ -54,40 +71,93 @@ export async function GET(
       where.sentiment = sentiment;
     }
 
-    // Fetch calls with pagination
-    const [calls, total] = await Promise.all([
-      prisma.callSession.findMany({
-        where,
-        orderBy: { startedAt: "desc" },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          callId: true,
-          direction: true,
-          fromNumber: true,
-          toNumber: true,
-          startedAt: true,
-          endedAt: true,
-          durationSec: true,
-          minutesBilled: true,
-          outcome: true,
-          sentiment: true,
-          sentimentScore: true,
-          summary: true,
-          extractedData: true,
-        },
-      }),
-      prisma.callSession.count({ where }),
-    ]);
+    // For JSON field filters, we need to fetch more and filter in memory
+    const needsJsonFilter = filterStoreCode || filterCarModel || filterTestDrive;
+
+    // Fetch calls - if JSON filtering needed, get more to account for filtering
+    const fetchLimit = needsJsonFilter ? limit * 5 : limit;
+    const skip = needsJsonFilter ? 0 : (page - 1) * limit;
+
+    let calls = await prisma.callSession.findMany({
+      where,
+      orderBy: { startedAt: "desc" },
+      skip,
+      take: needsJsonFilter ? undefined : fetchLimit,
+      select: {
+        id: true,
+        callId: true,
+        direction: true,
+        fromNumber: true,
+        toNumber: true,
+        startedAt: true,
+        endedAt: true,
+        durationSec: true,
+        minutesBilled: true,
+        outcome: true,
+        sentiment: true,
+        sentimentScore: true,
+        summary: true,
+        extractedData: true,
+        payloadJson: true,
+      },
+    });
+
+    // Apply JSON field filters
+    if (needsJsonFilter) {
+      calls = calls.filter((call) => {
+        const extracted = call.extractedData as unknown as ExtractedData | null;
+        const payload = call.payloadJson as unknown as PayloadData | null;
+        
+        // Store code filter
+        if (filterStoreCode) {
+          const storeCode = payload?.store_code?.toString();
+          if (storeCode !== filterStoreCode) return false;
+        }
+        
+        // Car model filter
+        if (filterCarModel) {
+          if (extracted?.car_model !== filterCarModel) return false;
+        }
+        
+        // Test drive filter
+        if (filterTestDrive) {
+          const testDrive = extracted?.test_drive_interest?.toLowerCase() || "";
+          const isYes = ["yes", "sure", "definitely", "maybe", "later", "हाँ", "शायद", "ठीक है"].some(
+            (v) => testDrive.includes(v)
+          );
+          const isNo = ["no", "not", "नहीं", "अभी नहीं"].some(
+            (v) => testDrive.includes(v)
+          );
+          
+          if (filterTestDrive === "yes" && !isYes) return false;
+          if (filterTestDrive === "no" && !isNo) return false;
+        }
+        
+        return true;
+      });
+    }
+
+    // Calculate total and paginate
+    const total = calls.length;
+    const paginatedCalls = needsJsonFilter 
+      ? calls.slice((page - 1) * limit, page * limit)
+      : calls;
+
+    // Get actual total count for pagination
+    const actualTotal = needsJsonFilter 
+      ? total 
+      : await prisma.callSession.count({ where });
 
     return NextResponse.json({
-      calls,
+      calls: paginatedCalls.map((call) => ({
+        ...call,
+        payloadJson: undefined, // Don't send full payload in list
+      })),
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        total: actualTotal,
+        totalPages: Math.ceil(actualTotal / limit),
       },
     });
   } catch (error) {
