@@ -234,9 +234,9 @@ export default function VoiceAgentOverviewPage() {
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Calls</p>
               <p className="text-3xl font-bold text-slate-900 mt-1">{analytics?.summary.totalCalls || 0}</p>
-              {analytics?.summary.callsTrend !== 0 && (
-                <p className={`text-xs mt-1 font-medium ${analytics?.summary.callsTrend > 0 ? "text-emerald-600" : "text-red-600"}`}>
-                  {analytics?.summary.callsTrend > 0 ? "↑" : "↓"} {Math.abs(analytics?.summary.callsTrend || 0)}% vs prev
+              {analytics?.summary.callsTrend != null && analytics.summary.callsTrend !== 0 && (
+                <p className={`text-xs mt-1 font-medium ${analytics.summary.callsTrend > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {analytics.summary.callsTrend > 0 ? "↑" : "↓"} {Math.abs(analytics.summary.callsTrend)}% vs prev
                 </p>
               )}
             </div>
