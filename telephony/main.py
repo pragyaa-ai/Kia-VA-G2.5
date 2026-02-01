@@ -21,8 +21,9 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse, parse_qs
 
 import websockets
@@ -31,16 +32,25 @@ from websockets.exceptions import ConnectionClosed
 from config import Config
 from audio_processor import AudioProcessor, AudioRates
 from gemini_live import GeminiLiveSession, GeminiSessionConfig
+from data_storage import AgentDataStorage
+from payload_builder import SIPayloadBuilder
+from admin_client import AdminClient
 
 
 @dataclass
 class TelephonySession:
     ucid: str
+    agent: str
     client_ws: websockets.WebSocketServerProtocol
     gemini: GeminiLiveSession
     input_buffer: list[int]
     output_buffer: list[int]
     closed: bool = False
+    # Transcript capture
+    conversation: List[Dict[str, Any]] = field(default_factory=list)
+    start_time: Optional[datetime] = None
+    customer_number: Optional[str] = None
+    store_code: Optional[str] = None
 
 
 # Supported agents and their prompt files (fallback if API unavailable)
@@ -126,6 +136,38 @@ def _is_interrupted(msg: Dict[str, Any]) -> bool:
     return bool(msg.get("serverContent", {}).get("interrupted"))
 
 
+def _extract_transcription(msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Extract transcription text from Gemini message.
+    
+    Input transcription: serverContent.inputTranscription.text
+    Output transcription: serverContent.modelTurn.parts[].text
+    """
+    server_content = msg.get("serverContent", {})
+    
+    # Input transcription (user speech)
+    input_trans = server_content.get("inputTranscription", {})
+    if input_trans and input_trans.get("text"):
+        return {
+            "speaker": "user",
+            "text": input_trans["text"],
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+        }
+    
+    # Output transcription (model speech) - from modelTurn parts with text
+    model_turn = server_content.get("modelTurn", {})
+    parts = model_turn.get("parts", [])
+    for part in parts:
+        if isinstance(part, dict) and part.get("text"):
+            return {
+                "speaker": "assistant",
+                "text": part["text"],
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+            }
+    
+    return None
+
+
 async def _gemini_reader(
     session: TelephonySession, audio_processor: AudioProcessor, cfg: Config
 ) -> None:
@@ -141,6 +183,15 @@ async def _gemini_reader(
                     print(f"[{session.ucid}] 🛑 Gemini interrupted → clearing output buffer")
                 session.output_buffer.clear()
                 continue
+
+            # Capture transcription if present
+            transcription = _extract_transcription(msg)
+            if transcription:
+                session.conversation.append(transcription)
+                if cfg.DEBUG:
+                    speaker = transcription["speaker"]
+                    text = transcription["text"][:50] + "..." if len(transcription["text"]) > 50 else transcription["text"]
+                    print(f"[{session.ucid}] 📝 {speaker}: {text}")
 
             audio_b64 = _extract_audio_b64_from_gemini_message(msg)
             if not audio_b64:
@@ -226,8 +277,8 @@ async def handle_client(client_ws, path: str):
         voice=cfg.GEMINI_VOICE,
         system_instructions=prompt,
         enable_affective_dialog=True,
-        enable_input_transcription=False,
-        enable_output_transcription=False,
+        enable_input_transcription=True,   # Enable for transcript capture
+        enable_output_transcription=True,  # Enable for transcript capture
         vad_silence_ms=500,   # Increased from 300ms for better noise tolerance
         vad_prefix_ms=500,    # Increased from 400ms for better noise tolerance
         activity_handling="START_OF_ACTIVITY_INTERRUPTS",
@@ -239,10 +290,13 @@ async def handle_client(client_ws, path: str):
 
     session = TelephonySession(
         ucid=ucid,
+        agent=agent,
         client_ws=client_ws,
         gemini=gemini,
         input_buffer=[],
         output_buffer=[],
+        conversation=[],
+        start_time=datetime.utcnow(),
     )
 
     try:
@@ -311,18 +365,81 @@ async def handle_client(client_ws, path: str):
         except asyncio.CancelledError:
             pass
 
+        # Save call data on normal completion
+        await _save_call_data(session, cfg)
+
     except asyncio.TimeoutError:
         await client_ws.close(code=1008, reason="Timeout waiting for start event")
     except ConnectionClosed:
-        pass
+        # Save data even on connection close
+        await _save_call_data(session, cfg)
     except Exception as e:
         if cfg.DEBUG:
             print(f"[{session.ucid}] ❌ Telephony handler error: {e}")
+        # Save data even on error
+        await _save_call_data(session, cfg)
     finally:
         try:
             await session.gemini.close()
         except Exception:
             pass
+
+
+async def _save_call_data(session: TelephonySession, cfg: Config) -> None:
+    """
+    Save call data to files and push to Admin UI.
+    Called at end of call (normal, disconnect, or error).
+    """
+    if session.ucid == "UNKNOWN":
+        return
+
+    if not session.conversation:
+        if cfg.DEBUG:
+            print(f"[{session.ucid}] ⚠️ No conversation to save")
+        return
+
+    end_time = datetime.utcnow()
+    duration_sec = int((end_time - session.start_time).total_seconds()) if session.start_time else 0
+
+    print(f"[{session.ucid}] 💾 Saving call data ({len(session.conversation)} entries, {duration_sec}s)")
+
+    try:
+        # Initialize storage and clients
+        storage = AgentDataStorage(session.agent, cfg)
+        payload_builder = SIPayloadBuilder(
+            agent=session.agent,
+            call_id=session.ucid,
+            customer_number=session.customer_number,
+            store_code=session.store_code,
+        )
+        admin_client = AdminClient(cfg)
+
+        # Build SI payload
+        si_payload = payload_builder.build_payload(
+            conversation=session.conversation,
+            start_time=session.start_time,
+            end_time=end_time,
+            duration_sec=duration_sec,
+        )
+
+        # Save files
+        storage.save_transcript(
+            call_id=session.ucid,
+            conversation=session.conversation,
+            metadata={
+                "agent": session.agent,
+                "duration_sec": duration_sec,
+                "start_time": session.start_time.isoformat() + "Z" if session.start_time else None,
+                "end_time": end_time.isoformat() + "Z",
+            },
+        )
+        storage.save_si_payload(session.ucid, si_payload)
+
+        # Push to Admin UI (async, fire-and-forget)
+        await admin_client.push_call_data(si_payload, session.ucid)
+
+    except Exception as e:
+        print(f"[{session.ucid}] ❌ Error saving call data: {e}")
 
 
 async def main() -> None:

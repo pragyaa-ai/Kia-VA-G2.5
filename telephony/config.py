@@ -50,6 +50,12 @@ class Config:
     AUDIO_BUFFER_MS_INPUT: int = int(os.getenv("AUDIO_BUFFER_MS_INPUT", "200"))
     AUDIO_BUFFER_MS_OUTPUT: int = int(os.getenv("AUDIO_BUFFER_MS_OUTPUT", "200"))
 
+    # Data Storage
+    DATA_BASE_DIR: str = os.getenv("DATA_BASE_DIR", "/data")
+    ADMIN_API_BASE: str = os.getenv("ADMIN_API_BASE", "http://127.0.0.1:3100")
+    ENABLE_DATA_STORAGE: bool = _env_bool("ENABLE_DATA_STORAGE", True)
+    ENABLE_ADMIN_PUSH: bool = _env_bool("ENABLE_ADMIN_PUSH", True)
+
     @property
     def AUDIO_BUFFER_SAMPLES_INPUT(self) -> int:
         return int((self.AUDIO_BUFFER_MS_INPUT / 1000.0) * self.TELEPHONY_SR)
