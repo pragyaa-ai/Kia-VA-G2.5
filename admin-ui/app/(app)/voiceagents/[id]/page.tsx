@@ -509,15 +509,26 @@ export default function VoiceAgentOverviewPage() {
         <Card className="p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">By Store Code</h3>
           {analytics?.storeCodeDistribution && Object.keys(analytics.storeCodeDistribution).length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart 
-                data={Object.entries(analytics.storeCodeDistribution).map(([name, value]) => ({ name, value }))}
+                data={Object.entries(analytics.storeCodeDistribution)
+                  .filter(([name]) => name && name.trim() !== "")
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 5)
+                  .map(([name, value]) => ({ name, value }))}
                 layout="vertical"
-                margin={{ left: 60 }}
+                margin={{ left: 10, right: 20, top: 10, bottom: 10 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} width={55} />
+                <YAxis 
+                  type="category" 
+                  dataKey="name" 
+                  tick={{ fontSize: 10, fill: "#64748b" }} 
+                  width={70}
+                  tickLine={false}
+                  axisLine={false}
+                />
                 <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }} />
                 <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -533,15 +544,26 @@ export default function VoiceAgentOverviewPage() {
         <Card className="p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">By Car Model</h3>
           {analytics?.carModelDistribution && Object.keys(analytics.carModelDistribution).length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart 
-                data={Object.entries(analytics.carModelDistribution).slice(0, 6).map(([name, value]) => ({ name, value }))}
+                data={Object.entries(analytics.carModelDistribution)
+                  .filter(([name]) => name && name.trim() !== "" && name !== "/")
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 5)
+                  .map(([name, value]) => ({ name: name.length > 12 ? name.slice(0, 12) + "..." : name, value }))}
                 layout="vertical"
-                margin={{ left: 80 }}
+                margin={{ left: 10, right: 20, top: 10, bottom: 10 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} width={75} />
+                <YAxis 
+                  type="category" 
+                  dataKey="name" 
+                  tick={{ fontSize: 10, fill: "#64748b" }} 
+                  width={90}
+                  tickLine={false}
+                  axisLine={false}
+                />
                 <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "12px" }} />
                 <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} />
               </BarChart>

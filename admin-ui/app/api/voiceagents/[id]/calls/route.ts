@@ -9,6 +9,7 @@ interface ExtractedData {
 }
 
 interface PayloadData {
+  store?: string | number;
   store_code?: string | number;
 }
 
@@ -108,9 +109,9 @@ export async function GET(
         const extracted = call.extractedData as unknown as ExtractedData | null;
         const payload = call.payloadJson as unknown as PayloadData | null;
         
-        // Store code filter
+        // Store code filter (check both "store" and "store_code" fields)
         if (filterStoreCode) {
-          const storeCode = payload?.store_code?.toString();
+          const storeCode = payload?.store?.toString() || payload?.store_code?.toString();
           if (storeCode !== filterStoreCode) return false;
         }
         

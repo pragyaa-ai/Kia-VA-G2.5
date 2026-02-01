@@ -7,6 +7,7 @@ interface ExtractedData {
 }
 
 interface PayloadData {
+  store?: string | number;
   store_code?: string | number;
 }
 
@@ -103,9 +104,12 @@ export async function GET(
       const extracted = call.extractedData as unknown as ExtractedData | null;
       const payload = call.payloadJson as unknown as PayloadData | null;
       
+      // Store code can be in "store" or "store_code" field
+      const storeCode = payload?.store?.toString() || payload?.store_code?.toString() || null;
+      
       return {
         ...call,
-        storeCode: payload?.store_code?.toString() || null,
+        storeCode,
         carModel: extracted?.car_model || null,
         testDrive: extracted?.test_drive_interest?.toLowerCase() || null,
       };
