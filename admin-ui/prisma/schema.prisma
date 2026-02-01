@@ -34,6 +34,21 @@ enum VoiceName {
   FARHAN
 }
 
+// Sentiment analysis result
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+// Call outcome status
+enum CallOutcome {
+  COMPLETE      // All data points captured
+  PARTIAL       // Some data points captured
+  INCOMPLETE    // No data captured / early drop-off
+  TRANSFERRED   // Successfully transferred to agent
+}
+
 model VoiceAgent {
   id            String            @id @default(cuid())
   name          String
@@ -135,6 +150,7 @@ model Feedback {
 
 model CallSession {
   id            String            @id @default(cuid())
+  callId        String?           @unique  // External ID from queue processor (e.g., "18882175837982271")
   voiceAgentId  String?
   engine        VoiceAgentEngine  @default(PRIMARY)
   direction     String            @default("inbound")
@@ -144,6 +160,28 @@ model CallSession {
   endedAt       DateTime?
   durationSec   Int?
   minutesBilled Decimal?          @db.Decimal(10, 2)
+  
+  // Enhanced analytics fields
+  outcome       CallOutcome?      // complete, partial, incomplete, transferred
+  
+  // Transcript and conversation
+  transcript    Json?             // Full conversation array [{timestamp, speaker, text}]
+  
+  // AI-generated analysis
+  summary       String?           @db.Text  // AI-generated call summary
+  sentiment     Sentiment?        // POSITIVE, NEUTRAL, NEGATIVE
+  sentimentScore Decimal?         @db.Decimal(3, 2)  // 0.00 to 1.00
+  
+  // Extracted sales data
+  extractedData Json?             // {full_name, car_model, email_id, test_drive_interest, confidence_scores}
+  
+  // Call analytics
+  analyticsJson Json?             // {total_exchanges, user_messages, assistant_messages, question_answer_pairs}
+  
+  // Raw payload from queue processor
+  payloadJson   Json?             // Complete queue processor result
+  
+  // Legacy meta field
   metaJson      Json?
 
   voiceAgent    VoiceAgent?       @relation(fields: [voiceAgentId], references: [id], onDelete: SetNull)
@@ -151,6 +189,9 @@ model CallSession {
   @@index([voiceAgentId])
   @@index([startedAt])
   @@index([engine])
+  @@index([callId])
+  @@index([outcome])
+  @@index([sentiment])
 }
 
 // ---- NextAuth (Prisma Adapter compatible shape) ----
