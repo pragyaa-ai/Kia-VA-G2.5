@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 
@@ -151,10 +152,16 @@ export async function POST(
             durationSec,
             minutesBilled,
             outcome,
-            transcript: (transcriptData?.conversation as unknown) ?? undefined,
-            extractedData: (resultData.extracted_data as unknown) ?? undefined,
-            analyticsJson: (resultData.call_analytics as unknown) ?? undefined,
-            payloadJson: resultData as unknown,
+            transcript: transcriptData?.conversation 
+              ? JSON.parse(JSON.stringify(transcriptData.conversation)) as Prisma.InputJsonValue
+              : undefined,
+            extractedData: resultData.extracted_data 
+              ? JSON.parse(JSON.stringify(resultData.extracted_data)) as Prisma.InputJsonValue
+              : undefined,
+            analyticsJson: resultData.call_analytics 
+              ? JSON.parse(JSON.stringify(resultData.call_analytics)) as Prisma.InputJsonValue
+              : undefined,
+            payloadJson: JSON.parse(JSON.stringify(resultData)) as Prisma.InputJsonValue,
           },
         });
 
