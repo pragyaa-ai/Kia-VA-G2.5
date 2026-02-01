@@ -108,8 +108,8 @@ class Config:
 # Agent to directory mapping
 # Maps agent query parameter to data subdirectory
 AGENT_DIRS = {
-    "spotlight": "kia2",  # Kia v2 (Gemini Live)
-    "kia": "kia2",
+    "spotlight": "kia1",  # Kia v1 (OpenAI) - legacy
+    "kia2": "kia2",       # Kia v2 (Gemini Live)
     "tata": "tata",
     "skoda": "skoda",
 }

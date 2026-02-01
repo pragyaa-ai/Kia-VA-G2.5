@@ -188,14 +188,15 @@ Key Personality Traits
 - Energy: Positive and encouraging`;
 
 async function main() {
-  // Upsert Kia VoiceAgent (spotlight)
-  const kia = await prisma.voiceAgent.upsert({
+  // Upsert Kia VoiceAgent v1 (OpenAI-based, legacy)
+  const kiaV1 = await prisma.voiceAgent.upsert({
     where: { slug: "spotlight" },
     update: {
+      name: "Kia VoiceAgent v1",  // Renamed from "Kia VoiceAgent"
       systemInstructions: KIA_PROMPT,
     },
     create: {
-      name: "Kia VoiceAgent",
+      name: "Kia VoiceAgent v1",
       slug: "spotlight",
       phoneNumber: "+91 9876543210",
       engine: "PRIMARY",
@@ -207,7 +208,28 @@ async function main() {
       systemInstructions: KIA_PROMPT,
     },
   });
-  console.log("Upserted Kia VoiceAgent:", kia.id, "(slug: spotlight)");
+  console.log("Upserted Kia VoiceAgent v1:", kiaV1.id, "(slug: spotlight) - OpenAI/Legacy");
+
+  // Upsert Kia VoiceAgent v2 (Gemini Live-based, new)
+  const kiaV2 = await prisma.voiceAgent.upsert({
+    where: { slug: "kia2" },
+    update: {
+      systemInstructions: KIA_PROMPT,
+    },
+    create: {
+      name: "Kia VoiceAgent v2",
+      slug: "kia2",
+      phoneNumber: "",
+      engine: "PRIMARY",
+      greeting: "Namaste! Kia Motors mein aapka swagat hai. Main aapki kya madad kar sakti hoon?",
+      accent: "INDIAN",
+      language: "HINDI",
+      voiceName: "AOEDE",  // Gemini voice
+      isActive: true,
+      systemInstructions: KIA_PROMPT,
+    },
+  });
+  console.log("Upserted Kia VoiceAgent v2:", kiaV2.id, "(slug: kia2) - Gemini Live");
 
   // Upsert Tata VoiceAgent
   const tata = await prisma.voiceAgent.upsert({
@@ -251,15 +273,15 @@ async function main() {
   });
   console.log("Upserted Skoda VoiceAgent:", skoda.id, "(slug: skoda)");
 
-  // Add call flow for Kia if it doesn't exist
-  const existingCallFlow = await prisma.callFlow.findUnique({
-    where: { voiceAgentId: kia.id },
+  // Add call flow for Kia v1 if it doesn't exist
+  const existingCallFlowV1 = await prisma.callFlow.findUnique({
+    where: { voiceAgentId: kiaV1.id },
   });
 
-  if (!existingCallFlow) {
+  if (!existingCallFlowV1) {
     await prisma.callFlow.create({
       data: {
-        voiceAgentId: kia.id,
+        voiceAgentId: kiaV1.id,
         greeting: "Namaste! Kia Motors mein aapka swagat hai.",
         steps: {
           create: [
@@ -271,26 +293,49 @@ async function main() {
         },
       },
     });
-    console.log("Created call flow for Kia");
+    console.log("Created call flow for Kia v1");
   }
 
-  // Add default guardrails for Kia if none exist
-  const existingGuardrails = await prisma.guardrail.count({
-    where: { voiceAgentId: kia.id },
+  // Add call flow for Kia v2 if it doesn't exist
+  const existingCallFlowV2 = await prisma.callFlow.findUnique({
+    where: { voiceAgentId: kiaV2.id },
   });
 
-  if (existingGuardrails === 0) {
+  if (!existingCallFlowV2) {
+    await prisma.callFlow.create({
+      data: {
+        voiceAgentId: kiaV2.id,
+        greeting: "Namaste! Kia Motors mein aapka swagat hai.",
+        steps: {
+          create: [
+            { order: 0, title: "Collect Name", content: "Ask for the customer's name in a friendly manner.", enabled: true },
+            { order: 1, title: "Identify Interest", content: "Ask which Kia model they're interested in.", enabled: true },
+            { order: 2, title: "Test Drive", content: "Offer to schedule a test drive.", enabled: true },
+            { order: 3, title: "Collect Email", content: "Ask for email (optional).", enabled: true },
+          ],
+        },
+      },
+    });
+    console.log("Created call flow for Kia v2");
+  }
+
+  // Add default guardrails for Kia v1 if none exist
+  const existingGuardrailsV1 = await prisma.guardrail.count({
+    where: { voiceAgentId: kiaV1.id },
+  });
+
+  if (existingGuardrailsV1 === 0) {
     await prisma.guardrail.createMany({
       data: [
         {
-          voiceAgentId: kia.id,
+          voiceAgentId: kiaV1.id,
           name: "No Competitor Comparisons",
           description: "Avoid comparing Kia cars to competitors",
           ruleText: "Never compare Kia vehicles to competitors. Focus only on Kia's features and benefits.",
           enabled: true,
         },
         {
-          voiceAgentId: kia.id,
+          voiceAgentId: kiaV1.id,
           name: "No Pricing Commitments",
           description: "Don't commit to specific prices",
           ruleText: "Do not commit to specific prices or discounts. Direct pricing questions to the dealership.",
@@ -298,7 +343,34 @@ async function main() {
         },
       ],
     });
-    console.log("Created guardrails for Kia");
+    console.log("Created guardrails for Kia v1");
+  }
+
+  // Add default guardrails for Kia v2 if none exist
+  const existingGuardrailsV2 = await prisma.guardrail.count({
+    where: { voiceAgentId: kiaV2.id },
+  });
+
+  if (existingGuardrailsV2 === 0) {
+    await prisma.guardrail.createMany({
+      data: [
+        {
+          voiceAgentId: kiaV2.id,
+          name: "No Competitor Comparisons",
+          description: "Avoid comparing Kia cars to competitors",
+          ruleText: "Never compare Kia vehicles to competitors. Focus only on Kia's features and benefits.",
+          enabled: true,
+        },
+        {
+          voiceAgentId: kiaV2.id,
+          name: "No Pricing Commitments",
+          description: "Don't commit to specific prices",
+          ruleText: "Do not commit to specific prices or discounts. Direct pricing questions to the dealership.",
+          enabled: true,
+        },
+      ],
+    });
+    console.log("Created guardrails for Kia v2");
   }
 
   console.log("\n✅ Seed completed successfully!");

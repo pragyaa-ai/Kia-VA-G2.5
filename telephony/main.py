@@ -55,7 +55,8 @@ class TelephonySession:
 
 # Supported agents and their prompt files (fallback if API unavailable)
 AGENT_PROMPTS = {
-    "spotlight": "kia_prompt.txt",
+    "spotlight": "kia_prompt.txt",  # Legacy Kia v1
+    "kia2": "kia_prompt.txt",       # Kia v2 (Gemini Live)
     "tata": "tata_prompt.txt",
     "skoda": "skoda_prompt.txt",
 }
