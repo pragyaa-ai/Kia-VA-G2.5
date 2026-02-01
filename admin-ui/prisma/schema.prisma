@@ -65,6 +65,11 @@ model VoiceAgent {
   
   // Full system instructions for the VoiceAgent (used by telephony)
   systemInstructions  String?     @db.Text
+  
+  // Payload templates (JSON structure for generating payloads from call data)
+  // These define the format of payloads posted after each call
+  siPayloadTemplate     Json?     // SI (Single Interface) webhook payload structure
+  waybeoPayloadTemplate Json?     // Waybeo callback payload structure
 
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt

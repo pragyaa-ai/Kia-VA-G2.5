@@ -37,6 +37,9 @@ export const createVoiceAgentSchema = z.object({
   voiceName: z.enum(["ANANYA", "PRIYA", "CHITRA", "KAVYA", "FARHAN"]).default("ANANYA"),
   isActive: z.boolean().default(true),
   systemInstructions: z.string().max(50000).optional(),
+  // Payload templates for post-call webhooks (JSON objects)
+  siPayloadTemplate: z.any().optional(),      // SI webhook payload structure
+  waybeoPayloadTemplate: z.any().optional(),  // Waybeo callback payload structure
 });
 
 export type CreateVoiceAgentInput = z.infer<typeof createVoiceAgentSchema>;
