@@ -8,9 +8,27 @@ interface ExtractedData {
   test_drive_interest?: string;
 }
 
-interface PayloadData {
+// SI Webhook Payload format
+interface ResponseDataItem {
+  key_value: string;
+  key_response: string;
+  key_label?: string;
+  remarks?: string;
+  attempts?: number;
+}
+
+interface SIPayloadData {
   store?: string | number;
   store_code?: string | number;
+  response_data?: ResponseDataItem[];
+  completion_status?: string;
+}
+
+// Helper to extract value from response_data array
+function getResponseValue(responseData: ResponseDataItem[] | undefined, keyValue: string): string | null {
+  if (!responseData) return null;
+  const item = responseData.find((r) => r.key_value === keyValue);
+  return item?.key_response?.trim() || null;
 }
 
 /**
@@ -107,22 +125,25 @@ export async function GET(
     if (needsJsonFilter) {
       calls = calls.filter((call) => {
         const extracted = call.extractedData as unknown as ExtractedData | null;
-        const payload = call.payloadJson as unknown as PayloadData | null;
+        const payload = call.payloadJson as unknown as SIPayloadData | null;
         
-        // Store code filter (check both "store" and "store_code" fields)
+        // Store code filter (SI payload format: store_code at root)
         if (filterStoreCode) {
-          const storeCode = payload?.store?.toString() || payload?.store_code?.toString();
+          const storeCode = payload?.store_code?.toString() || payload?.store?.toString();
           if (storeCode !== filterStoreCode) return false;
         }
         
-        // Car model filter
+        // Car model filter (check SI payload response_data first, then extractedData)
         if (filterCarModel) {
-          if (extracted?.car_model !== filterCarModel) return false;
+          const carModelFromPayload = getResponseValue(payload?.response_data, "model");
+          const carModel = carModelFromPayload || extracted?.car_model;
+          if (carModel !== filterCarModel) return false;
         }
         
-        // Test drive filter
+        // Test drive filter (check SI payload response_data first, then extractedData)
         if (filterTestDrive) {
-          const testDrive = extracted?.test_drive_interest?.toLowerCase() || "";
+          const testDriveFromPayload = getResponseValue(payload?.response_data, "test_drive");
+          const testDrive = (testDriveFromPayload || extracted?.test_drive_interest || "").toLowerCase();
           const isYes = ["yes", "sure", "definitely", "maybe", "later", "हाँ", "शायद", "ठीक है"].some(
             (v) => testDrive.includes(v)
           );

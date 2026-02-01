@@ -6,9 +6,29 @@ interface ExtractedData {
   test_drive_interest?: string;
 }
 
-interface PayloadData {
+// SI Webhook Payload format (the actual payload structure)
+interface ResponseDataItem {
+  key_value: string;
+  key_response: string;
+  key_label?: string;
+  remarks?: string;
+  attempts?: number;
+}
+
+interface SIPayloadData {
   store?: string | number;
   store_code?: string | number;
+  response_data?: ResponseDataItem[];
+  completion_status?: string;
+  customer_number?: number | string;
+  duration?: number;
+}
+
+// Helper to extract value from response_data array
+function getResponseValue(responseData: ResponseDataItem[] | undefined, keyValue: string): string | null {
+  if (!responseData) return null;
+  const item = responseData.find((r) => r.key_value === keyValue);
+  return item?.key_response?.trim() || null;
 }
 
 /**
@@ -102,16 +122,24 @@ export async function GET(
     // Extract store codes, car models, test drive from calls
     const processedCalls = calls.map((call) => {
       const extracted = call.extractedData as unknown as ExtractedData | null;
-      const payload = call.payloadJson as unknown as PayloadData | null;
+      const payload = call.payloadJson as unknown as SIPayloadData | null;
       
-      // Store code can be in "store" or "store_code" field
-      const storeCode = payload?.store?.toString() || payload?.store_code?.toString() || null;
+      // Store code can be in "store" or "store_code" field (SI payload format)
+      const storeCode = payload?.store_code?.toString() || payload?.store?.toString() || null;
+      
+      // Car model: first try SI payload response_data, then extractedData
+      const carModelFromPayload = getResponseValue(payload?.response_data, "model");
+      const carModel = carModelFromPayload || extracted?.car_model || null;
+      
+      // Test drive: first try SI payload response_data, then extractedData
+      const testDriveFromPayload = getResponseValue(payload?.response_data, "test_drive");
+      const testDrive = (testDriveFromPayload || extracted?.test_drive_interest || "").toLowerCase() || null;
       
       return {
         ...call,
         storeCode,
-        carModel: extracted?.car_model || null,
-        testDrive: extracted?.test_drive_interest?.toLowerCase() || null,
+        carModel,
+        testDrive,
       };
     });
 
