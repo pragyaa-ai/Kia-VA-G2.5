@@ -96,6 +96,7 @@ export default function VoiceAgentOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [period, setPeriod] = useState("30d");
+  const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [form, setForm] = useState({
     name: "",
     phoneNumber: "",
@@ -108,9 +109,15 @@ export default function VoiceAgentOverviewPage() {
   });
 
   useEffect(() => {
+    // Build analytics URL with period or custom date range
+    let analyticsUrl = `/api/voiceagents/${params.id}/analytics?period=${period}`;
+    if (period === "custom" && customRange.start && customRange.end) {
+      analyticsUrl = `/api/voiceagents/${params.id}/analytics?startDate=${customRange.start}&endDate=${customRange.end}`;
+    }
+
     Promise.all([
       fetch(`/api/voiceagents/${params.id}`).then((r) => r.json()),
-      fetch(`/api/voiceagents/${params.id}/analytics?period=${period}`).then((r) => r.json()),
+      fetch(analyticsUrl).then((r) => r.json()),
       fetch(`/api/voiceagents/${params.id}/calls?limit=5`).then((r) => r.json()),
     ])
       .then(([agentData, analyticsData, callsData]) => {
@@ -129,7 +136,7 @@ export default function VoiceAgentOverviewPage() {
         });
       })
       .finally(() => setLoading(false));
-  }, [params.id, period]);
+  }, [params.id, period, customRange.start, customRange.end]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -208,22 +215,54 @@ export default function VoiceAgentOverviewPage() {
   return (
     <div className="space-y-8">
       {/* Period Selector */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-xl font-semibold text-slate-900">Analytics Overview</h2>
-        <div className="flex items-center gap-2">
-          {["7d", "30d", "90d", "all"].map((p) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {["today", "7d", "30d", "90d", "all"].map((p) => (
             <button
               key={p}
-              onClick={() => setPeriod(p)}
+              onClick={() => {
+                setPeriod(p);
+                setCustomRange({ start: "", end: "" });
+              }}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                period === p
+                period === p && !customRange.start
                   ? "bg-indigo-600 text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {p === "all" ? "All Time" : p.replace("d", " Days")}
+              {p === "all" ? "All Time" : p === "today" ? "Today" : p.replace("d", " Days")}
             </button>
           ))}
+          <div className="flex items-center gap-2 ml-2">
+            <input
+              type="date"
+              value={customRange.start}
+              onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+              className="px-2 py-1.5 text-sm rounded-lg border border-slate-200 bg-white"
+              placeholder="From"
+            />
+            <span className="text-slate-400">to</span>
+            <input
+              type="date"
+              value={customRange.end}
+              onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+              className="px-2 py-1.5 text-sm rounded-lg border border-slate-200 bg-white"
+              placeholder="To"
+            />
+            {customRange.start && customRange.end && (
+              <button
+                onClick={() => setPeriod("custom")}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                  period === "custom"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                }`}
+              >
+                Apply
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

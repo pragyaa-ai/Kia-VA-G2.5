@@ -6,7 +6,9 @@ import { prisma } from "@/lib/prisma";
  * Get aggregated analytics for charts
  * 
  * Query params:
- * - period: "7d" | "30d" | "90d" | "all" (default: "30d")
+ * - period: "today" | "7d" | "30d" | "90d" | "all" (default: "30d")
+ * - startDate: ISO date string for custom range
+ * - endDate: ISO date string for custom range
  */
 export async function GET(
   request: NextRequest,
@@ -15,34 +17,54 @@ export async function GET(
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "30d";
+    const customStartDate = searchParams.get("startDate");
+    const customEndDate = searchParams.get("endDate");
 
     // Calculate date range
     let startDate: Date | undefined;
+    let endDate: Date | undefined;
     const now = new Date();
-    
-    switch (period) {
-      case "7d":
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "30d":
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case "90d":
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case "all":
-        startDate = undefined;
-        break;
-      default:
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Handle custom date range
+    if (customStartDate && customEndDate) {
+      startDate = new Date(customStartDate);
+      endDate = new Date(customEndDate);
+      // Set end date to end of day
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      switch (period) {
+        case "today":
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case "7d":
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "30d":
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case "90d":
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case "all":
+          startDate = undefined;
+          break;
+        default:
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      }
     }
 
     const where: Record<string, unknown> = {
       voiceAgentId: params.id,
     };
 
-    if (startDate) {
-      where.startedAt = { gte: startDate };
+    if (startDate || endDate) {
+      where.startedAt = {};
+      if (startDate) {
+        (where.startedAt as Record<string, Date>).gte = startDate;
+      }
+      if (endDate) {
+        (where.startedAt as Record<string, Date>).lte = endDate;
+      }
     }
 
     // Get all calls in period
