@@ -98,7 +98,23 @@ class Config:
             f"out={self.AUDIO_BUFFER_MS_OUTPUT}ms "
             f"({self.AUDIO_BUFFER_SAMPLES_OUTPUT} samples)"
         )
+        print(f"📁 Data dir: {self.DATA_BASE_DIR}")
+        print(f"🔄 Data storage: {'✅' if self.ENABLE_DATA_STORAGE else '❌'}")
+        print(f"📤 Admin push: {'✅' if self.ENABLE_ADMIN_PUSH else '❌'}")
         print(f"🐞 DEBUG: {self.DEBUG}")
         print("=" * 68)
 
+
+# Agent to directory mapping
+# Maps agent query parameter to data subdirectory
+AGENT_DIRS = {
+    "spotlight": "kia2",  # Kia v2 (Gemini Live)
+    "kia": "kia2",
+    "tata": "tata",
+    "skoda": "skoda",
+}
+
+def get_agent_dir(agent: str) -> str:
+    """Get the data directory name for an agent."""
+    return AGENT_DIRS.get(agent.lower(), agent.lower())
 
