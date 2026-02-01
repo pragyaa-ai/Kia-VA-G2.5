@@ -229,7 +229,7 @@ async function main() {
       greeting: "Namaste! Kia Motors mein aapka swagat hai. Main aapki kya madad kar sakti hoon?",
       accent: "INDIAN",
       language: "HINDI",
-      voiceName: "AOEDE",  // Gemini voice
+      voiceName: "ANANYA",  // Maps to Aoede in Gemini
       isActive: true,
       systemInstructions: KIA_PROMPT,
     },
