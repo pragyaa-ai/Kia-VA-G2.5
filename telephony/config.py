@@ -81,7 +81,7 @@ class Config:
 
     def print_config(self) -> None:
         print("=" * 68)
-        print("📞 Kia VoiceAgent Telephony (Gemini Live) – Configuration")
+        print("📞 VoiceAgent Telephony (Gemini Live) – Configuration")
         print("=" * 68)
         print(f"🌐 Server: ws://{self.HOST}:{self.PORT}{self.WS_PATH}")
         print(f"🧠 Gemini model: {self.GEMINI_MODEL}")
@@ -106,15 +106,21 @@ class Config:
 
 
 # Agent to directory mapping
-# Maps agent query parameter to data subdirectory
+# For v2+ agents, data is stored in /data/{agent_slug}/
+# Any agent not listed here uses its slug directly as directory name
+# This allows new agents added via UI to auto-use their slug
 AGENT_DIRS = {
-    "spotlight": "kia2",  # Kia v2 (Gemini Live) - active testing
-    "kia-v1": "kia1",     # Kia v1 (OpenAI) - legacy reporting only
-    "tata": "tata",
-    "skoda": "skoda",
+    "spotlight": "kia2",  # Kia v2 (Gemini Live) - maps spotlight -> kia2 directory
+    # "tata": "tata",     # Would use "tata" anyway (fallback)
+    # "skoda": "skoda",   # Would use "skoda" anyway (fallback)
 }
 
 def get_agent_dir(agent: str) -> str:
-    """Get the data directory name for an agent."""
+    """
+    Get the data directory name for an agent.
+    
+    - Explicit mappings in AGENT_DIRS take precedence
+    - Otherwise, uses the agent slug directly as directory name
+    - This allows new VoiceAgents added via UI to auto-create directories
+    """
     return AGENT_DIRS.get(agent.lower(), agent.lower())
-

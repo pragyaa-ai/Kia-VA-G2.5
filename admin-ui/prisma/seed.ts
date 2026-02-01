@@ -188,7 +188,9 @@ Key Personality Traits
 - Energy: Positive and encouraging`;
 
 async function main() {
-  // Upsert Kia VoiceAgent v1 (OpenAI-based, legacy - for reporting only)
+  // Kia VoiceAgent v1 (OpenAI-based, legacy)
+  // Data source: /data/transcripts/ and /data/results/ (synced via queue processor)
+  // This is a SEPARATE service, Admin UI only displays data for reporting
   const kiaV1 = await prisma.voiceAgent.upsert({
     where: { slug: "kia-v1" },
     update: {
@@ -207,14 +209,16 @@ async function main() {
       systemInstructions: KIA_PROMPT,
     },
   });
-  console.log("Upserted Kia VoiceAgent v1:", kiaV1.id, "(slug: kia-v1) - OpenAI/Legacy reporting");
+  console.log("Upserted Kia VoiceAgent v1:", kiaV1.id, "(slug: kia-v1)");
+  console.log("  → Data: /data/transcripts/ & /data/results/ (legacy OpenAI)");
 
-  // Upsert Kia VoiceAgent v2 (Gemini Live-based, active testing)
-  // Uses slug "spotlight" to match WSS URL ?agent=spotlight
+  // Kia VoiceAgent v2 (Gemini Live)
+  // Data source: /data/kia2/ (new structure)
+  // WSS URL: wss://...?agent=spotlight
   const kiaV2 = await prisma.voiceAgent.upsert({
     where: { slug: "spotlight" },
     update: {
-      name: "Kia VoiceAgent v2",  // Renamed from "Kia VoiceAgent"
+      name: "Kia VoiceAgent v2",
       systemInstructions: KIA_PROMPT,
     },
     create: {
@@ -230,7 +234,8 @@ async function main() {
       systemInstructions: KIA_PROMPT,
     },
   });
-  console.log("Upserted Kia VoiceAgent v2:", kiaV2.id, "(slug: spotlight) - Gemini Live active");
+  console.log("Upserted Kia VoiceAgent v2:", kiaV2.id, "(slug: spotlight)");
+  console.log("  → Data: /data/kia2/ (Gemini Live)");
 
   // Upsert Tata VoiceAgent
   const tata = await prisma.voiceAgent.upsert({
@@ -252,6 +257,7 @@ async function main() {
     },
   });
   console.log("Upserted Tata VoiceAgent:", tata.id, "(slug: tata)");
+  console.log("  → Data: /data/tata/ (Gemini Live)");
 
   // Upsert Skoda VoiceAgent
   const skoda = await prisma.voiceAgent.upsert({
@@ -273,6 +279,7 @@ async function main() {
     },
   });
   console.log("Upserted Skoda VoiceAgent:", skoda.id, "(slug: skoda)");
+  console.log("  → Data: /data/skoda/ (Gemini Live)");
 
   // Add call flow for Kia v1 if it doesn't exist
   const existingCallFlowV1 = await prisma.callFlow.findUnique({
