@@ -151,9 +151,9 @@ export async function POST(
             durationSec,
             minutesBilled,
             outcome,
-            transcript: transcriptData?.conversation || null,
-            extractedData: resultData.extracted_data || null,
-            analyticsJson: resultData.call_analytics || null,
+            transcript: transcriptData?.conversation ?? undefined,
+            extractedData: resultData.extracted_data ?? undefined,
+            analyticsJson: resultData.call_analytics ?? undefined,
             payloadJson: resultData as unknown as Record<string, unknown>,
           },
         });
