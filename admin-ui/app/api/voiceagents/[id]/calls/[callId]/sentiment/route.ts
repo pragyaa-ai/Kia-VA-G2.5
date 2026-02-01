@@ -43,7 +43,7 @@ export async function POST(
     }
 
     // Format transcript for analysis
-    const transcript = call.transcript as ConversationEntry[];
+    const transcript = call.transcript as unknown as ConversationEntry[];
     const conversationText = transcript
       .map((entry) => `${entry.speaker.toUpperCase()}: ${entry.text}`)
       .join("\n");
