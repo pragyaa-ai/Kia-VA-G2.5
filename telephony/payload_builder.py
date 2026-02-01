@@ -29,7 +29,6 @@ from typing import Any, Dict, List, Optional, Tuple
 AGENT_CUSTOMER_NAMES = {
     "spotlight": "Kia",
     "kia": "Kia",
-    "kia2": "Kia",
     "tata": "Tata",
     "skoda": "Skoda",
 }

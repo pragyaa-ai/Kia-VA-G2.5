@@ -188,16 +188,15 @@ Key Personality Traits
 - Energy: Positive and encouraging`;
 
 async function main() {
-  // Upsert Kia VoiceAgent v1 (OpenAI-based, legacy)
+  // Upsert Kia VoiceAgent v1 (OpenAI-based, legacy - for reporting only)
   const kiaV1 = await prisma.voiceAgent.upsert({
-    where: { slug: "spotlight" },
+    where: { slug: "kia-v1" },
     update: {
-      name: "Kia VoiceAgent v1",  // Renamed from "Kia VoiceAgent"
-      systemInstructions: KIA_PROMPT,
+      name: "Kia VoiceAgent v1",
     },
     create: {
       name: "Kia VoiceAgent v1",
-      slug: "spotlight",
+      slug: "kia-v1",
       phoneNumber: "+91 9876543210",
       engine: "PRIMARY",
       greeting: "Namaste! Kia Motors mein aapka swagat hai. Main aapki kya madad kar sakti hoon?",
@@ -208,17 +207,19 @@ async function main() {
       systemInstructions: KIA_PROMPT,
     },
   });
-  console.log("Upserted Kia VoiceAgent v1:", kiaV1.id, "(slug: spotlight) - OpenAI/Legacy");
+  console.log("Upserted Kia VoiceAgent v1:", kiaV1.id, "(slug: kia-v1) - OpenAI/Legacy reporting");
 
-  // Upsert Kia VoiceAgent v2 (Gemini Live-based, new)
+  // Upsert Kia VoiceAgent v2 (Gemini Live-based, active testing)
+  // Uses slug "spotlight" to match WSS URL ?agent=spotlight
   const kiaV2 = await prisma.voiceAgent.upsert({
-    where: { slug: "kia2" },
+    where: { slug: "spotlight" },
     update: {
+      name: "Kia VoiceAgent v2",  // Renamed from "Kia VoiceAgent"
       systemInstructions: KIA_PROMPT,
     },
     create: {
       name: "Kia VoiceAgent v2",
-      slug: "kia2",
+      slug: "spotlight",
       phoneNumber: "",
       engine: "PRIMARY",
       greeting: "Namaste! Kia Motors mein aapka swagat hai. Main aapki kya madad kar sakti hoon?",
@@ -229,7 +230,7 @@ async function main() {
       systemInstructions: KIA_PROMPT,
     },
   });
-  console.log("Upserted Kia VoiceAgent v2:", kiaV2.id, "(slug: kia2) - Gemini Live");
+  console.log("Upserted Kia VoiceAgent v2:", kiaV2.id, "(slug: spotlight) - Gemini Live active");
 
   // Upsert Tata VoiceAgent
   const tata = await prisma.voiceAgent.upsert({
