@@ -151,10 +151,10 @@ export async function POST(
             durationSec,
             minutesBilled,
             outcome,
-            transcript: transcriptData?.conversation ?? undefined,
-            extractedData: resultData.extracted_data ?? undefined,
-            analyticsJson: resultData.call_analytics ?? undefined,
-            payloadJson: resultData as unknown as Record<string, unknown>,
+            transcript: (transcriptData?.conversation as unknown) ?? undefined,
+            extractedData: (resultData.extracted_data as unknown) ?? undefined,
+            analyticsJson: (resultData.call_analytics as unknown) ?? undefined,
+            payloadJson: resultData as unknown,
           },
         });
 
