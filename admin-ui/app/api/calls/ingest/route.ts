@@ -25,6 +25,10 @@ import { Prisma } from "@prisma/client";
  *     { "key_value": "model", "key_response": "EV9", ... },
  *     { "key_value": "test_drive", "key_response": "No", ... }
  *   ],
+ *   "transcript": [
+ *     { "timestamp": "...", "speaker": "user", "text": "..." },
+ *     { "timestamp": "...", "speaker": "agent", "text": "..." }
+ *   ],
  *   ...
  * }
  */
@@ -35,6 +39,12 @@ interface ResponseDataItem {
   key_label?: string;
   remarks?: string;
   attempts?: number;
+}
+
+interface TranscriptEntry {
+  timestamp: string;
+  speaker: string;
+  text: string;
 }
 
 interface SIPayload {
@@ -49,6 +59,7 @@ interface SIPayload {
   duration?: number;
   completion_status?: string;
   response_data?: ResponseDataItem[];
+  transcript?: TranscriptEntry[];
   language?: {
     welcome?: string;
     conversational?: string;
@@ -80,6 +91,85 @@ function mapCompletionStatus(status?: string): "COMPLETE" | "PARTIAL" | "INCOMPL
   if (normalized === "incomplete") return "INCOMPLETE";
   if (normalized === "transferred" || normalized === "transfer") return "TRANSFERRED";
   return null;
+}
+
+// Generate summary and sentiment from transcript using Gemini
+async function generateSummaryAndSentiment(transcript: TranscriptEntry[]): Promise<{
+  summary: string | null;
+  sentiment: "POSITIVE" | "NEUTRAL" | "NEGATIVE" | null;
+  sentimentScore: number | null;
+}> {
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey || transcript.length === 0) {
+    return { summary: null, sentiment: null, sentimentScore: null };
+  }
+
+  try {
+    // Format transcript for analysis
+    const conversationText = transcript
+      .map((entry) => `${entry.speaker.toUpperCase()}: ${entry.text}`)
+      .join("\n");
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Analyze the following customer service call transcript and provide:
+1. Overall sentiment (POSITIVE, NEUTRAL, or NEGATIVE)
+2. Sentiment score from 0.0 to 1.0 (0.0 = very negative, 0.5 = neutral, 1.0 = very positive)
+3. A brief 2-3 sentence summary of the call
+
+TRANSCRIPT:
+${conversationText}
+
+Respond in JSON format only:
+{
+  "sentiment": "POSITIVE" | "NEUTRAL" | "NEGATIVE",
+  "sentimentScore": 0.75,
+  "summary": "Brief summary here"
+}`,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 500,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("[Ingest] Gemini API error:", response.status);
+      return { summary: null, sentiment: null, sentimentScore: null };
+    }
+
+    const data = await response.json();
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    // Parse JSON from response
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return { summary: null, sentiment: null, sentimentScore: null };
+    }
+
+    const analysis = JSON.parse(jsonMatch[0]);
+    return {
+      summary: analysis.summary || null,
+      sentiment: analysis.sentiment || null,
+      sentimentScore: analysis.sentimentScore ? parseFloat(analysis.sentimentScore) : null,
+    };
+  } catch (error) {
+    console.error("[Ingest] Error generating summary/sentiment:", error);
+    return { summary: null, sentiment: null, sentimentScore: null };
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -120,6 +210,20 @@ export async function POST(request: NextRequest) {
       test_drive_interest: getResponseValue(payload.response_data, "test_drive"),
     };
 
+    // Auto-generate summary and sentiment if transcript is provided
+    let summary: string | null = null;
+    let sentiment: "POSITIVE" | "NEUTRAL" | "NEGATIVE" | null = null;
+    let sentimentScore: number | null = null;
+
+    if (payload.transcript && payload.transcript.length > 0) {
+      console.log(`[Ingest] Generating summary/sentiment for ${payload.call_ref_id}...`);
+      const analysis = await generateSummaryAndSentiment(payload.transcript);
+      summary = analysis.summary;
+      sentiment = analysis.sentiment;
+      sentimentScore = analysis.sentimentScore;
+      console.log(`[Ingest] Generated: sentiment=${sentiment}, score=${sentimentScore}`);
+    }
+
     // Upsert the call session (update if exists, create if not)
     const callSession = await prisma.callSession.upsert({
       where: {
@@ -135,6 +239,10 @@ export async function POST(request: NextRequest) {
         outcome: mapCompletionStatus(payload.completion_status),
         extractedData: extractedData as Prisma.InputJsonValue,
         payloadJson: payload as unknown as Prisma.InputJsonValue,
+        transcript: payload.transcript as unknown as Prisma.InputJsonValue ?? undefined,
+        summary: summary ?? undefined,
+        sentiment: sentiment ?? undefined,
+        sentimentScore: sentimentScore ?? undefined,
       },
       create: {
         callId: payload.call_ref_id,
@@ -148,6 +256,10 @@ export async function POST(request: NextRequest) {
         outcome: mapCompletionStatus(payload.completion_status),
         extractedData: extractedData as Prisma.InputJsonValue,
         payloadJson: payload as unknown as Prisma.InputJsonValue,
+        transcript: payload.transcript as unknown as Prisma.InputJsonValue ?? undefined,
+        summary: summary ?? undefined,
+        sentiment: sentiment ?? undefined,
+        sentimentScore: sentimentScore ?? undefined,
       },
     });
 
@@ -160,6 +272,8 @@ export async function POST(request: NextRequest) {
       storeCode: payload.store_code,
       carModel: extractedData.car_model,
       testDrive: extractedData.test_drive_interest,
+      summary,
+      sentiment,
     });
   } catch (error) {
     console.error("[Ingest] Error storing call:", error);

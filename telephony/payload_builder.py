@@ -200,6 +200,7 @@ class SIPayloadBuilder:
         duration_sec: Optional[int] = None,
         dealer_routing: Optional[Dict[str, Any]] = None,
         language: Optional[Dict[str, str]] = None,
+        include_transcript: bool = True,
     ) -> Dict[str, Any]:
         """
         Build complete SI webhook payload.
@@ -211,6 +212,7 @@ class SIPayloadBuilder:
             duration_sec: Call duration in seconds
             dealer_routing: Dealer routing info
             language: Language configuration
+            include_transcript: Whether to include raw transcript (for Admin UI)
 
         Returns:
             Complete SI payload dict
@@ -250,5 +252,9 @@ class SIPayloadBuilder:
             "completion_status": completion_status,
             "response_data": response_data,
         }
+
+        # Include raw transcript for Admin UI to enable summary/sentiment analysis
+        if include_transcript and conversation:
+            payload["transcript"] = conversation
 
         return payload
