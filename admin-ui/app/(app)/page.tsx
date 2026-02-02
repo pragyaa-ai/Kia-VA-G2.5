@@ -1,8 +1,83 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+
+interface DashboardStats {
+  counts: {
+    voiceAgents: number;
+    totalCalls: number;
+    feedback: number;
+  };
+  stats: {
+    callsLast30Days: number;
+    totalMinutes: number;
+    avgDuration: number;
+    dataCaptureRate: number;
+  };
+  outcomeDistribution: {
+    complete: number;
+    partial: number;
+    incomplete: number;
+    transferred: number;
+  };
+  sentimentDistribution: {
+    positive: number;
+    neutral: number;
+    negative: number;
+  };
+  chartData: Array<{ date: string; calls: number }>;
+}
+
+const OUTCOME_COLORS = ["#10b981", "#f59e0b", "#ef4444", "#6366f1"];
+const SENTIMENT_COLORS = ["#10b981", "#94a3b8", "#ef4444"];
 
 export default function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/dashboard/stats")
+      .then((res) => res.json())
+      .then((data) => {
+        setStats(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const outcomeData = stats
+    ? [
+        { name: "Complete", value: stats.outcomeDistribution.complete },
+        { name: "Partial", value: stats.outcomeDistribution.partial },
+        { name: "Incomplete", value: stats.outcomeDistribution.incomplete },
+        { name: "Transferred", value: stats.outcomeDistribution.transferred },
+      ].filter((d) => d.value > 0)
+    : [];
+
+  const sentimentData = stats
+    ? [
+        { name: "Positive", value: stats.sentimentDistribution.positive },
+        { name: "Neutral", value: stats.sentimentDistribution.neutral },
+        { name: "Negative", value: stats.sentimentDistribution.negative },
+      ].filter((d) => d.value > 0)
+    : [];
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -15,7 +90,7 @@ export default function DashboardPage() {
           </p>
           <div className="mt-6 flex gap-3">
             <Link href="/voiceagents">
-              <Button className="bg-white text-indigo-700 hover:bg-indigo-50">
+              <Button className="bg-white/10 text-white border border-white/30 hover:bg-white hover:text-indigo-700 transition-all">
                 View VoiceAgents
               </Button>
             </Link>
@@ -39,7 +114,9 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-500">VoiceAgents</p>
-              <p className="text-2xl font-bold text-slate-900">—</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {loading ? "—" : stats?.counts.voiceAgents || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -53,7 +130,9 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-500">Total Calls</p>
-              <p className="text-2xl font-bold text-slate-900">—</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {loading ? "—" : stats?.counts.totalCalls || 0}
+              </p>
             </div>
           </div>
         </Card>
@@ -67,93 +146,131 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-500">Feedback Items</p>
-              <p className="text-2xl font-bold text-slate-900">—</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {loading ? "—" : stats?.counts.feedback || 0}
+              </p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link href="/voiceagents">
-          <Card className="p-6 h-full hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer group">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition">
-                  VoiceAgents
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Configure greeting, voice, accent, and call flows
-                </p>
-              </div>
-            </div>
-          </Card>
-        </Link>
-
-        <Link href="/feedback">
-          <Card className="p-6 h-full hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer group">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-900 group-hover:text-amber-600 transition">
-                  Feedback
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Review testing feedback and improve behavior
-                </p>
-              </div>
-            </div>
-          </Card>
-        </Link>
-
-        <Link href="/usage">
-          <Card className="p-6 h-full hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer group">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-900 group-hover:text-emerald-600 transition">
-                  Usage
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Track calls and minutes across all VoiceAgents
-                </p>
-              </div>
-            </div>
-          </Card>
-        </Link>
+      {/* Performance Stats - Last 30 Days */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <Card className="p-5">
+          <p className="text-sm font-medium text-slate-500">Calls (30 days)</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
+            {loading ? "—" : stats?.stats.callsLast30Days || 0}
+          </p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-sm font-medium text-slate-500">Total Minutes</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
+            {loading ? "—" : `${stats?.stats.totalMinutes || 0} min`}
+          </p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-sm font-medium text-slate-500">Avg Duration</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
+            {loading ? "—" : `${stats?.stats.avgDuration || 0}s`}
+          </p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-sm font-medium text-slate-500">Data Capture Rate</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
+            {loading ? "—" : `${stats?.stats.dataCaptureRate || 0}%`}
+          </p>
+        </Card>
       </div>
 
-      {/* Tip Card */}
-      <Card className="p-5 bg-gradient-to-r from-slate-50 to-white border-slate-200">
-        <div className="flex gap-4">
-          <div className="flex-shrink-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-slate-500">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
+      {/* Charts */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Calls by Date */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Calls by Date (Last 14 Days)</h3>
+          {stats?.chartData && stats.chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={stats.chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return `${date.getDate()}/${date.getMonth() + 1}`;
+                  }}
+                />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "8px",
+                  }}
+                />
+                <Bar dataKey="calls" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-slate-400">
+              No call data available
             </div>
+          )}
+        </Card>
+
+        {/* Call Outcomes */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Call Outcomes</h3>
+          {outcomeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={outcomeData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {outcomeData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={OUTCOME_COLORS[index % OUTCOME_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Legend />
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-slate-400">
+              No outcome data available
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Sentiment Distribution */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">Sentiment Distribution</h3>
+        {sentimentData.length > 0 ? (
+          <div className="grid grid-cols-3 gap-4">
+            {sentimentData.map((item, index) => (
+              <div
+                key={item.name}
+                className="text-center p-4 rounded-xl"
+                style={{ backgroundColor: `${SENTIMENT_COLORS[index]}15` }}
+              >
+                <p className="text-3xl font-bold" style={{ color: SENTIMENT_COLORS[index] }}>
+                  {item.value}
+                </p>
+                <p className="text-sm text-slate-600 mt-1">{item.name}</p>
+              </div>
+            ))}
           </div>
-          <div>
-            <h4 className="font-medium text-slate-900">Getting Started</h4>
-            <p className="text-sm text-slate-500 mt-1">
-              Run <code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-mono">npx prisma db seed</code> to 
-              create the default "Kia VoiceAgent" with preconfigured settings, call flow, and guardrails.
-            </p>
+        ) : (
+          <div className="h-[100px] flex items-center justify-center text-slate-400">
+            No sentiment data available
           </div>
-        </div>
+        )}
       </Card>
     </div>
   );
