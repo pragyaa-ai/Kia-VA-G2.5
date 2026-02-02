@@ -209,13 +209,14 @@ Key Personality Traits
 - Energy: Positive and encouraging`;
 
 async function main() {
-  // Kia VoiceAgent v1 (OpenAI-based, legacy)
+  // Kia VoiceAgent v1 (OpenAI-based, legacy) - LIVE
   // Data source: /data/transcripts/ and /data/results/ (synced via queue processor)
   // This is a SEPARATE service, Admin UI only displays data for reporting
   const kiaV1 = await prisma.voiceAgent.upsert({
     where: { slug: "kia-v1" },
     update: {
       name: "Kia VoiceAgent v1",
+      isLive: true,  // Live VoiceAgent
     },
     create: {
       name: "Kia VoiceAgent v1",
@@ -227,13 +228,14 @@ async function main() {
       language: "HINDI",
       voiceName: "ANANYA",
       isActive: true,
+      isLive: true,  // Live VoiceAgent
       systemInstructions: KIA_PROMPT,
     },
   });
-  console.log("Upserted Kia VoiceAgent v1:", kiaV1.id, "(slug: kia-v1)");
+  console.log("Upserted Kia VoiceAgent v1:", kiaV1.id, "(slug: kia-v1, LIVE)");
   console.log("  → Data: /data/transcripts/ & /data/results/ (legacy OpenAI)");
 
-  // Kia VoiceAgent v2 (Gemini Live)
+  // Kia VoiceAgent v2 (Gemini Live) - TEST
   // Data source: /data/kia2/ (new structure)
   // WSS URL: wss://...?agent=spotlight
   const kiaV2 = await prisma.voiceAgent.upsert({
@@ -241,28 +243,31 @@ async function main() {
     update: {
       name: "Kia VoiceAgent v2",
       systemInstructions: KIA_PROMPT,
+      isLive: false,  // Test VoiceAgent
     },
     create: {
       name: "Kia VoiceAgent v2",
       slug: "spotlight",
-      phoneNumber: "",
+      phoneNumber: "+91 9876543210",
       engine: "PRIMARY",
       greeting: "Namaste! Kia Motors mein aapka swagat hai. Main aapki kya madad kar sakti hoon?",
       accent: "INDIAN",
       language: "HINDI",
       voiceName: "ANANYA",  // Maps to Aoede in Gemini
       isActive: true,
+      isLive: false,  // Test VoiceAgent
       systemInstructions: KIA_PROMPT,
     },
   });
-  console.log("Upserted Kia VoiceAgent v2:", kiaV2.id, "(slug: spotlight)");
+  console.log("Upserted Kia VoiceAgent v2:", kiaV2.id, "(slug: spotlight, TEST)");
   console.log("  → Data: /data/kia2/ (Gemini Live)");
 
-  // Upsert Tata VoiceAgent
+  // Upsert Tata VoiceAgent - TEST
   const tata = await prisma.voiceAgent.upsert({
     where: { slug: "tata" },
     update: {
       systemInstructions: TATA_PROMPT,
+      isLive: false,  // Test VoiceAgent
     },
     create: {
       name: "Tata VoiceAgent",
@@ -274,17 +279,19 @@ async function main() {
       language: "HINDI",
       voiceName: "ANANYA",
       isActive: true,
+      isLive: false,  // Test VoiceAgent
       systemInstructions: TATA_PROMPT,
     },
   });
-  console.log("Upserted Tata VoiceAgent:", tata.id, "(slug: tata)");
+  console.log("Upserted Tata VoiceAgent:", tata.id, "(slug: tata, TEST)");
   console.log("  → Data: /data/tata/ (Gemini Live)");
 
-  // Upsert Skoda VoiceAgent
+  // Upsert Skoda VoiceAgent - TEST
   const skoda = await prisma.voiceAgent.upsert({
     where: { slug: "skoda" },
     update: {
       systemInstructions: SKODA_PROMPT,
+      isLive: false,  // Test VoiceAgent
     },
     create: {
       name: "Skoda VoiceAgent",
@@ -296,10 +303,11 @@ async function main() {
       language: "HINDI",
       voiceName: "ANANYA",
       isActive: true,
+      isLive: false,  // Test VoiceAgent
       systemInstructions: SKODA_PROMPT,
     },
   });
-  console.log("Upserted Skoda VoiceAgent:", skoda.id, "(slug: skoda)");
+  console.log("Upserted Skoda VoiceAgent:", skoda.id, "(slug: skoda, TEST)");
   console.log("  → Data: /data/skoda/ (Gemini Live)");
 
   // Add call flow for Kia v1 if it doesn't exist

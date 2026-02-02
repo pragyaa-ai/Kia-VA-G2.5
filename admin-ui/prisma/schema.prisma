@@ -62,6 +62,7 @@ model VoiceAgent {
   phoneNumber   String?
   engine        VoiceAgentEngine  @default(PRIMARY)
   isActive      Boolean           @default(true)
+  isLive        Boolean           @default(false)  // true = Live, false = Test
 
   // Key configurable parameters
   greeting      String            @default("Hello! Welcome. How can I help you today?")
