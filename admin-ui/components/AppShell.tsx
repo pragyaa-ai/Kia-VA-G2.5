@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -25,8 +26,15 @@ const CUSTOMER_BRANDING: Record<string, { logo: string; name: string }> = {
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const { data: session } = useSession();
-  const customerSlug = session?.user?.customerSlug || "default";
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Always use default on server, then update on client after mount
+  const customerSlug = mounted ? (session?.user?.customerSlug || "default") : "default";
   const branding = CUSTOMER_BRANDING[customerSlug] || CUSTOMER_BRANDING.default;
 
   return (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -12,11 +13,16 @@ const allNav = [
 ];
 
 export function SidebarNav() {
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession();
   
-  // Get user role (default to USER if not logged in)
-  const userRole = session?.user?.role || "USER";
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // Get user role - use USER as default on server to ensure consistent hydration
+  const userRole = mounted ? (session?.user?.role || "USER") : "USER";
   
   // Filter nav items based on role
   const nav = allNav.filter((item) => item.roles.includes(userRole));

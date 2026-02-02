@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { ReactNode } from "react";
@@ -19,13 +20,18 @@ const allTabs = [
 ];
 
 export default function VoiceAgentLayout({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const params = useParams();
   const base = `/voiceagents/${params.id}`;
   const { data: session } = useSession();
   
-  // Get user role (default to USER if not logged in)
-  const userRole = session?.user?.role || "USER";
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // Get user role - use USER as default on server to ensure consistent hydration
+  const userRole = mounted ? (session?.user?.role || "USER") : "USER";
   
   // Filter tabs based on user role
   const tabs = allTabs.filter((tab) => tab.roles.includes(userRole));

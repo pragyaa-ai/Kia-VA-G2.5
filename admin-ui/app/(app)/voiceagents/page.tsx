@@ -166,8 +166,13 @@ function VoiceAgentCard({
 export default function VoiceAgentsPage() {
   const [agents, setAgents] = useState<VoiceAgent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { data: session } = useSession();
+  const [mounted, setMounted] = useState(false);
+  const { data: session, status } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchAgents = () => {
     fetch("/api/voiceagents")
@@ -268,7 +273,7 @@ export default function VoiceAgentsPage() {
                     key={agent.id}
                     agent={agent}
                     onToggleLive={handleToggleLive}
-                    isAdmin={isAdmin}
+                    isAdmin={mounted && isAdmin}
                   />
                 ))}
               </div>
@@ -303,7 +308,7 @@ export default function VoiceAgentsPage() {
                     key={agent.id}
                     agent={agent}
                     onToggleLive={handleToggleLive}
-                    isAdmin={isAdmin}
+                    isAdmin={mounted && isAdmin}
                   />
                 ))}
               </div>
