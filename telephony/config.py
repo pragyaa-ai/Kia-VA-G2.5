@@ -32,6 +32,7 @@ class Config:
     WS_PATH: str = os.getenv("WS_PATH", "/ws")
 
     DEBUG: bool = _env_bool("DEBUG", False)
+    LOG_TRANSCRIPTS: bool = _env_bool("LOG_TRANSCRIPTS", True)  # Show transcript text in logs
 
     # GCP / Gemini
     GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")

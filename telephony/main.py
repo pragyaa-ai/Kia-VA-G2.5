@@ -179,7 +179,7 @@ async def _gemini_reader(
 
             if _is_interrupted(msg):
                 # Barge-in: clear any queued audio to telephony
-                if cfg.DEBUG:
+                if cfg.LOG_TRANSCRIPTS:
                     print(f"[{session.ucid}] 🛑 Gemini interrupted → clearing output buffer")
                 session.output_buffer.clear()
                 continue
@@ -188,7 +188,7 @@ async def _gemini_reader(
             transcription = _extract_transcription(msg)
             if transcription:
                 session.conversation.append(transcription)
-                if cfg.DEBUG:
+                if cfg.LOG_TRANSCRIPTS:
                     speaker = transcription["speaker"]
                     text = transcription["text"][:50] + "..." if len(transcription["text"]) > 50 else transcription["text"]
                     print(f"[{session.ucid}] 📝 {speaker}: {text}")
@@ -314,12 +314,12 @@ async def handle_client(client_ws, path: str):
             or "UNKNOWN"
         )
 
-        if cfg.DEBUG:
+        if cfg.LOG_TRANSCRIPTS:
             print(f"[{session.ucid}] 🎬 start event received on path={path}")
 
         # Connect to Gemini
         await session.gemini.connect()
-        if cfg.DEBUG:
+        if cfg.LOG_TRANSCRIPTS:
             print(f"[{session.ucid}] ✅ Connected to Gemini Live")
 
         # Start reader task
@@ -334,7 +334,7 @@ async def handle_client(client_ws, path: str):
 
             event = msg.get("event")
             if event in {"stop", "end", "close"}:
-                if cfg.DEBUG:
+                if cfg.LOG_TRANSCRIPTS:
                     print(f"[{session.ucid}] 📞 stop event received")
                 break
 
