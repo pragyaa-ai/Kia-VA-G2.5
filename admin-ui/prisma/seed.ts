@@ -1,6 +1,25 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+// User credentials
+const USERS = [
+  {
+    username: "SIAdmin",
+    password: "OneView01!",
+    name: "SI Admin",
+    email: "admin@singleinterface.com",
+    role: "ADMIN" as const,
+  },
+  {
+    username: "SingleInterface",
+    password: "VoiceAgent01!",
+    name: "Single Interface User",
+    email: "user@singleinterface.com",
+    role: "USER" as const,
+  },
+];
 
 // System instructions for each VoiceAgent
 const KIA_PROMPT = `Agent Overview
@@ -379,6 +398,29 @@ async function main() {
       ],
     });
     console.log("Created guardrails for Kia v2");
+  }
+
+  // Create/update user accounts
+  console.log("\n📝 Creating user accounts...");
+  for (const userData of USERS) {
+    const passwordHash = await bcrypt.hash(userData.password, 10);
+    const user = await prisma.user.upsert({
+      where: { username: userData.username },
+      update: {
+        name: userData.name,
+        email: userData.email,
+        passwordHash,
+        role: userData.role,
+      },
+      create: {
+        username: userData.username,
+        name: userData.name,
+        email: userData.email,
+        passwordHash,
+        role: userData.role,
+      },
+    });
+    console.log(`  ✅ ${userData.username} (${userData.role}): ${user.id}`);
   }
 
   console.log("\n✅ Seed completed successfully!");

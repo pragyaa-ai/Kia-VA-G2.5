@@ -2,16 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
-const nav = [
-  { href: "/", label: "Dashboard" },
-  { href: "/voiceagents", label: "VoiceAgents" },
-  { href: "/feedback", label: "Feedback" },
-  { href: "/usage", label: "Usage" }
+const allNav = [
+  { href: "/", label: "Dashboard", roles: ["ADMIN", "USER"] },
+  { href: "/voiceagents", label: "VoiceAgents", roles: ["ADMIN", "USER"] },
+  { href: "/feedback", label: "Feedback", roles: ["ADMIN", "USER"] },
+  { href: "/usage", label: "Usage", roles: ["ADMIN"] },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  
+  // Get user role (default to USER if not logged in)
+  const userRole = session?.user?.role || "USER";
+  
+  // Filter nav items based on role
+  const nav = allNav.filter((item) => item.roles.includes(userRole));
+
   return (
     <nav className="space-y-1">
       {nav.map((item) => {
@@ -35,5 +44,3 @@ export function SidebarNav() {
     </nav>
   );
 }
-
-

@@ -3,23 +3,32 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { ReactNode } from "react";
+import { useSession } from "next-auth/react";
 
-const tabs = [
-  { segment: "", label: "Overview" },
-  { segment: "/calls", label: "Calls" },
-  { segment: "/instructions", label: "Instructions" },
-  { segment: "/callflow", label: "Call Flow" },
-  { segment: "/guardrails", label: "Guardrails" },
-  { segment: "/voice", label: "Voice" },
-  { segment: "/telephony", label: "Telephony" },
-  { segment: "/feedback", label: "Feedback" },
-  { segment: "/usage", label: "Usage" },
+// All available tabs
+const allTabs = [
+  { segment: "", label: "Overview", roles: ["ADMIN", "USER"] },
+  { segment: "/calls", label: "Calls", roles: ["ADMIN", "USER"] },
+  { segment: "/instructions", label: "Instructions", roles: ["ADMIN"] },
+  { segment: "/callflow", label: "Call Flow", roles: ["ADMIN"] },
+  { segment: "/guardrails", label: "Guardrails", roles: ["ADMIN"] },
+  { segment: "/voice", label: "Voice", roles: ["ADMIN"] },
+  { segment: "/telephony", label: "Telephony", roles: ["ADMIN"] },
+  { segment: "/feedback", label: "Feedback", roles: ["ADMIN", "USER"] },
+  { segment: "/usage", label: "Usage", roles: ["ADMIN"] },
 ];
 
 export default function VoiceAgentLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const params = useParams();
   const base = `/voiceagents/${params.id}`;
+  const { data: session } = useSession();
+  
+  // Get user role (default to USER if not logged in)
+  const userRole = session?.user?.role || "USER";
+  
+  // Filter tabs based on user role
+  const tabs = allTabs.filter((tab) => tab.roles.includes(userRole));
 
   return (
     <div className="space-y-6">
@@ -59,4 +68,3 @@ export default function VoiceAgentLayout({ children }: { children: ReactNode }) 
     </div>
   );
 }
-
