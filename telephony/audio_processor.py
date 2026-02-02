@@ -74,7 +74,14 @@ class AudioProcessor:
         return base64.b64encode(samples_16k.tobytes()).decode("utf-8")
 
     # ---- Output (Gemini -> Waybeo) ----
-    def process_output_gemini_b64_to_8k_samples(self, audio_b64: str) -> List[int]:
+    def process_output_gemini_b64_to_8k_samples(self, audio_b64: str, apply_fade: bool = False) -> List[int]:
+        """
+        Convert Gemini audio output to Waybeo format.
+        
+        Args:
+            audio_b64: Base64 encoded audio from Gemini (24kHz int16 PCM)
+            apply_fade: Whether to apply fade in/out (only use at conversation boundaries)
+        """
         raw = base64.b64decode(audio_b64)
         # Gemini audio output is int16 PCM
         samples_out = np.frombuffer(raw, dtype=np.int16)
@@ -83,7 +90,9 @@ class AudioProcessor:
             orig_sr=self.rates.gemini_output_sr,
             target_sr=self.rates.telephony_sr,
         )
-        samples_8k = self.apply_fade(samples_8k)
+        # Only apply fade at conversation boundaries, not on every chunk
+        if apply_fade:
+            samples_8k = self.apply_fade(samples_8k)
         return self.np_to_waybeo_samples(samples_8k)
 
 

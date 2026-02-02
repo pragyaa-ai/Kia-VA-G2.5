@@ -322,8 +322,13 @@ async def handle_client(client_ws, path: str):
         if cfg.LOG_TRANSCRIPTS:
             print(f"[{session.ucid}] ✅ Connected to Gemini Live")
 
-        # Start reader task
+        # Start reader task FIRST so we catch the greeting audio
         gemini_task = asyncio.create_task(_gemini_reader(session, audio_processor, cfg))
+
+        # Trigger greeting immediately - don't wait for user audio
+        await session.gemini.trigger_greeting()
+        if cfg.LOG_TRANSCRIPTS:
+            print(f"[{session.ucid}] 🎙️ Greeting triggered")
 
         # Process remaining messages
         async for raw in client_ws:

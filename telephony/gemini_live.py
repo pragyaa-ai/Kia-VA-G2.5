@@ -116,6 +116,25 @@ class GeminiLiveSession:
             }
         )
 
+    async def trigger_greeting(self) -> None:
+        """
+        Send a client message to trigger the AI to start speaking immediately.
+        This avoids the delay waiting for user audio input.
+        """
+        await self.send_json(
+            {
+                "client_content": {
+                    "turns": [
+                        {
+                            "role": "user",
+                            "parts": [{"text": "Hello"}]
+                        }
+                    ],
+                    "turn_complete": True
+                }
+            }
+        )
+
     async def messages(self) -> AsyncIterator[dict]:
         if not self._ws:
             raise RuntimeError("GeminiLiveSession not connected")
