@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// User credentials
+// User credentials with customer branding
 const USERS = [
   {
     username: "SIAdmin",
@@ -11,6 +11,7 @@ const USERS = [
     name: "SI Admin",
     email: "admin@singleinterface.com",
     role: "ADMIN" as const,
+    customerSlug: "singleinterface",  // Maps to /logos/singleinterface.png
   },
   {
     username: "SingleInterface",
@@ -18,6 +19,7 @@ const USERS = [
     name: "Single Interface User",
     email: "user@singleinterface.com",
     role: "USER" as const,
+    customerSlug: "singleinterface",  // Maps to /logos/singleinterface.png
   },
 ];
 
@@ -411,6 +413,7 @@ async function main() {
         email: userData.email,
         passwordHash,
         role: userData.role,
+        customerSlug: userData.customerSlug,
       },
       create: {
         username: userData.username,
@@ -418,9 +421,10 @@ async function main() {
         email: userData.email,
         passwordHash,
         role: userData.role,
+        customerSlug: userData.customerSlug,
       },
     });
-    console.log(`  ✅ ${userData.username} (${userData.role}): ${user.id}`);
+    console.log(`  ✅ ${userData.username} (${userData.role}, ${userData.customerSlug}): ${user.id}`);
   }
 
   console.log("\n✅ Seed completed successfully!");

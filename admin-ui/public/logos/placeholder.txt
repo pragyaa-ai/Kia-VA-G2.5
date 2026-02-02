@@ -1,0 +1,13 @@
+Logo files to add here:
+
+1. singleinterface.png - SingleInterface logo (the blue dots grid logo)
+2. pragyaa.png - Pragyaa.ai logo (colorful circles with orange text)
+3. default.png - Default logo for users without customerSlug
+4. kia.png - Kia Motors logo (if needed for Kia-specific users)
+
+Recommended dimensions:
+- Customer logos (singleinterface.png, kia.png): 140x40 pixels
+- Pragyaa.ai logo: 100x28 pixels
+
+You can also use SVG files - just update the file extensions in:
+- components/AppShell.tsx (CUSTOMER_BRANDING object)

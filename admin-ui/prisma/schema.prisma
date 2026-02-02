@@ -244,6 +244,7 @@ model User {
   username      String?   @unique  // For credentials login
   passwordHash  String?             // bcrypt hashed password
   role          UserRole  @default(USER)
+  customerSlug  String?             // Customer branding slug (e.g., "singleinterface", "kia")
   emailVerified DateTime?
   image         String?
   createdAt     DateTime  @default(now())
