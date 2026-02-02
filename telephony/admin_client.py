@@ -60,36 +60,64 @@ class AdminClient:
         import urllib.error
 
         def do_request() -> bool:
-            try:
-                data = json.dumps(payload).encode("utf-8")
-                req = urllib.request.Request(
-                    self.ingest_url,
-                    data=data,
-                    method="POST",
-                    headers={
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                    },
-                )
+            url = self.ingest_url
+            max_redirects = 3
+            
+            for attempt in range(max_redirects + 1):
+                try:
+                    data = json.dumps(payload).encode("utf-8")
+                    req = urllib.request.Request(
+                        url,
+                        data=data,
+                        method="POST",
+                        headers={
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                        },
+                    )
 
-                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                    if resp.status == 200:
-                        result = json.loads(resp.read().decode("utf-8"))
-                        print(f"[{call_id}] ✅ Pushed to Admin UI: {result.get('callSessionId', 'OK')}")
-                        return True
-                    else:
-                        print(f"[{call_id}] ⚠️ Admin UI returned status {resp.status}")
-                        return False
+                    # Create opener that doesn't auto-follow redirects
+                    class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+                        def redirect_request(self, req, fp, code, msg, headers, newurl):
+                            # Return None to not auto-follow, we'll handle manually
+                            return None
 
-            except urllib.error.HTTPError as e:
-                print(f"[{call_id}] ⚠️ Admin UI HTTP error: {e.code} {e.reason}")
-                return False
-            except urllib.error.URLError as e:
-                print(f"[{call_id}] ⚠️ Admin UI connection error: {e.reason}")
-                return False
-            except Exception as e:
-                print(f"[{call_id}] ⚠️ Admin UI request error: {e}")
-                return False
+                    opener = urllib.request.build_opener(NoRedirectHandler)
+                    
+                    try:
+                        resp = opener.open(req, timeout=self.timeout)
+                        if resp.status == 200:
+                            result = json.loads(resp.read().decode("utf-8"))
+                            print(f"[{call_id}] ✅ Pushed to Admin UI: {result.get('callSessionId', 'OK')}")
+                            return True
+                        else:
+                            print(f"[{call_id}] ⚠️ Admin UI returned status {resp.status}")
+                            return False
+                    except urllib.error.HTTPError as e:
+                        # Handle redirects (307, 308 preserve method)
+                        if e.code in (301, 302, 303, 307, 308):
+                            new_url = e.headers.get("Location")
+                            if new_url and attempt < max_redirects:
+                                # Handle relative URLs
+                                if new_url.startswith("/"):
+                                    new_url = f"{self.base_url}{new_url}"
+                                print(f"[{call_id}] 🔄 Following redirect to: {new_url}")
+                                url = new_url
+                                continue
+                        raise
+
+                except urllib.error.HTTPError as e:
+                    print(f"[{call_id}] ⚠️ Admin UI HTTP error: {e.code} {e.reason}")
+                    return False
+                except urllib.error.URLError as e:
+                    print(f"[{call_id}] ⚠️ Admin UI connection error: {e.reason}")
+                    return False
+                except Exception as e:
+                    print(f"[{call_id}] ⚠️ Admin UI request error: {e}")
+                    return False
+            
+            print(f"[{call_id}] ⚠️ Too many redirects")
+            return False
 
         # Run sync request in thread pool to not block event loop
         loop = asyncio.get_event_loop()
