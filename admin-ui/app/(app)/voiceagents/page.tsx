@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { VOICE_NAMES, ACCENTS, LANGUAGES, ENGINE_LABELS } from "@/src/lib/validation";
@@ -24,15 +25,18 @@ interface VoiceAgent {
 function VoiceAgentCard({
   agent,
   onToggleLive,
+  isAdmin,
 }: {
   agent: VoiceAgent;
   onToggleLive: (id: string, isLive: boolean) => void;
+  isAdmin: boolean;
 }) {
   const [toggling, setToggling] = useState(false);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!isAdmin) return;
     setToggling(true);
     await onToggleLive(agent.id, !agent.isLive);
     setToggling(false);
@@ -91,29 +95,46 @@ function VoiceAgentCard({
         </div>
       </Link>
 
-      {/* Live/Test Toggle */}
+      {/* Live/Test Toggle (Admin) or Badge (User) */}
       <div className="flex items-center justify-between py-3 border-t border-b border-slate-100 mb-3">
         <span className="text-sm text-slate-600">Environment</span>
-        <button
-          onClick={handleToggle}
-          disabled={toggling}
-          className={`relative inline-flex h-6 w-20 items-center rounded-full transition-colors ${
-            agent.isLive ? "bg-emerald-500" : "bg-amber-500"
-          } ${toggling ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
-        >
+        {isAdmin ? (
+          <button
+            onClick={handleToggle}
+            disabled={toggling}
+            className={`relative inline-flex h-6 w-20 items-center rounded-full transition-colors ${
+              agent.isLive ? "bg-emerald-500" : "bg-amber-500"
+            } ${toggling ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
+          >
+            <span
+              className={`inline-block h-5 w-9 transform rounded-full bg-white shadow-sm transition-transform ${
+                agent.isLive ? "translate-x-10" : "translate-x-0.5"
+              }`}
+            />
+            <span
+              className={`absolute text-[10px] font-bold text-white uppercase ${
+                agent.isLive ? "left-2" : "right-2"
+              }`}
+            >
+              {agent.isLive ? "Live" : "Test"}
+            </span>
+          </button>
+        ) : (
           <span
-            className={`inline-block h-5 w-9 transform rounded-full bg-white shadow-sm transition-transform ${
-              agent.isLive ? "translate-x-10" : "translate-x-0.5"
-            }`}
-          />
-          <span
-            className={`absolute text-[10px] font-bold text-white uppercase ${
-              agent.isLive ? "left-2" : "right-2"
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+              agent.isLive
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-amber-100 text-amber-700"
             }`}
           >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                agent.isLive ? "bg-emerald-500" : "bg-amber-500"
+              }`}
+            />
             {agent.isLive ? "Live" : "Test"}
           </span>
-        </button>
+        )}
       </div>
 
       {/* Stats Footer */}
@@ -145,6 +166,8 @@ function VoiceAgentCard({
 export default function VoiceAgentsPage() {
   const [agents, setAgents] = useState<VoiceAgent[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
 
   const fetchAgents = () => {
     fetch("/api/voiceagents")
@@ -245,6 +268,7 @@ export default function VoiceAgentsPage() {
                     key={agent.id}
                     agent={agent}
                     onToggleLive={handleToggleLive}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
@@ -279,6 +303,7 @@ export default function VoiceAgentsPage() {
                     key={agent.id}
                     agent={agent}
                     onToggleLive={handleToggleLive}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
