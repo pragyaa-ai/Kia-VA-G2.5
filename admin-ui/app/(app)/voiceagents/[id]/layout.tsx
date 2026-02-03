@@ -16,7 +16,6 @@ const allTabs = [
   { segment: "/voice", label: "Voice", roles: ["ADMIN"] },
   { segment: "/telephony", label: "Telephony", roles: ["ADMIN"] },
   { segment: "/feedback", label: "Feedback", roles: ["ADMIN", "USER"] },
-  { segment: "/usage", label: "Usage", roles: ["ADMIN"] },
 ];
 
 export default function VoiceAgentLayout({ children }: { children: ReactNode }) {
