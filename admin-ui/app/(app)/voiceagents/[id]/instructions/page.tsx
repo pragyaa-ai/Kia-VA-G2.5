@@ -135,6 +135,7 @@ export default function ConfigurationPage() {
   const [siPayloadTemplate, setSiPayloadTemplate] = useState("");
   const [waybeoPayloadTemplate, setWaybeoPayloadTemplate] = useState("");
   // Webhook endpoint state
+  const [siCustomerName, setSiCustomerName] = useState("");
   const [siEndpointUrl, setSiEndpointUrl] = useState("");
   const [siAuthHeader, setSiAuthHeader] = useState("");
   const [waybeoEndpointUrl, setWaybeoEndpointUrl] = useState("");
@@ -169,6 +170,7 @@ export default function ConfigurationPage() {
             : JSON.stringify(DEFAULT_WAYBEO_TEMPLATE, null, 2)
         );
         // Set webhook endpoints
+        setSiCustomerName(data.siCustomerName || "");
         setSiEndpointUrl(data.siEndpointUrl || "");
         setSiAuthHeader(data.siAuthHeader || "");
         setWaybeoEndpointUrl(data.waybeoEndpointUrl || "");
@@ -208,6 +210,7 @@ export default function ConfigurationPage() {
         systemInstructions,
         siPayloadTemplate: siTemplate,
         waybeoPayloadTemplate: waybeoTemplate,
+        siCustomerName: siCustomerName || null,
         siEndpointUrl: siEndpointUrl || null,
         siAuthHeader: siAuthHeader || null,
         waybeoEndpointUrl: waybeoEndpointUrl || null,
@@ -513,8 +516,22 @@ export default function ConfigurationPage() {
 
           {/* Webhook Endpoint Configuration */}
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-4">
-            <h4 className="text-sm font-semibold text-indigo-800">Webhook Endpoint</h4>
-            <div className="grid gap-4 md:grid-cols-2">
+            <h4 className="text-sm font-semibold text-indigo-800">Webhook Configuration</h4>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="block text-xs font-medium text-indigo-700 mb-1">
+                  Customer Name <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  value={siCustomerName}
+                  onChange={(e) => setSiCustomerName(e.target.value)}
+                  placeholder="Kia"
+                  className="text-sm"
+                />
+                <p className="mt-1 text-xs text-indigo-600">
+                  Account identifier passed in payload (e.g., &quot;Kia&quot;, &quot;LakmeSalon&quot;)
+                </p>
+              </div>
               <div>
                 <label className="block text-xs font-medium text-indigo-700 mb-1">
                   SI Endpoint URL

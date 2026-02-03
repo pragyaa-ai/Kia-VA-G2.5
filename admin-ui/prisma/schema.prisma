@@ -79,6 +79,7 @@ model VoiceAgent {
   waybeoPayloadTemplate Json?     // Waybeo callback payload structure
   
   // Webhook endpoints for post-call payload delivery
+  siCustomerName        String?   // SI customer/account name (e.g., "Kia", "LakmeSalon") - passed in payload
   siEndpointUrl         String?   // SI webhook URL (e.g., https://testing.myspotlight.co/api/voicebot-lead-save)
   siAuthHeader          String?   // Authorization header value for SI (e.g., "Bearer xxx")
   waybeoEndpointUrl     String?   // Waybeo callback URL

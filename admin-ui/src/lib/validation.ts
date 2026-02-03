@@ -41,6 +41,7 @@ export const createVoiceAgentSchema = z.object({
   siPayloadTemplate: z.any().optional(),      // SI webhook payload structure
   waybeoPayloadTemplate: z.any().optional(),  // Waybeo callback payload structure
   // Webhook endpoints for post-call payload delivery
+  siCustomerName: z.string().max(100).optional(),                     // SI customer/account name (e.g., "Kia")
   siEndpointUrl: z.string().url().optional().or(z.literal("")),       // SI webhook URL
   siAuthHeader: z.string().max(500).optional(),                       // SI Authorization header
   waybeoEndpointUrl: z.string().url().optional().or(z.literal("")),   // Waybeo callback URL

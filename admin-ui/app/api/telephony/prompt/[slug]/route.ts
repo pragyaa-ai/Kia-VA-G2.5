@@ -33,6 +33,7 @@ export async function GET(
         // Payload templates and webhook endpoints for post-call delivery
         siPayloadTemplate: true,
         waybeoPayloadTemplate: true,
+        siCustomerName: true,
         siEndpointUrl: true,
         siAuthHeader: true,
         waybeoEndpointUrl: true,
@@ -77,6 +78,7 @@ export async function GET(
       siPayloadTemplate: agent.siPayloadTemplate,
       waybeoPayloadTemplate: agent.waybeoPayloadTemplate,
       // Webhook endpoints for post-call delivery
+      siCustomerName: agent.siCustomerName || null,
       siEndpointUrl: agent.siEndpointUrl || null,
       siAuthHeader: agent.siAuthHeader || null,
       waybeoEndpointUrl: agent.waybeoEndpointUrl || null,
