@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Card } from "@/components/ui/Card";
+import { VOICE_NAMES, ACCENTS, LANGUAGES, ENGINE_LABELS } from "@/lib/validation";
 
 // Default SI payload template
 const DEFAULT_SI_TEMPLATE = {
@@ -88,25 +90,64 @@ const DEFAULT_WAYBEO_TEMPLATE = {
   }
 };
 
-export default function InstructionsPage() {
+interface VoiceAgent {
+  id: string;
+  name: string;
+  slug: string;
+  phoneNumber?: string;
+  greeting: string;
+  accent: keyof typeof ACCENTS;
+  language: keyof typeof LANGUAGES;
+  voiceName: keyof typeof VOICE_NAMES;
+  engine: keyof typeof ENGINE_LABELS;
+  isActive: boolean;
+  systemInstructions?: string;
+  siPayloadTemplate?: object;
+  waybeoPayloadTemplate?: object;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function ConfigurationPage() {
   const params = useParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [agent, setAgent] = useState<VoiceAgent | null>(null);
+  
+  // Form state
+  const [form, setForm] = useState({
+    name: "",
+    phoneNumber: "",
+    greeting: "",
+    accent: "INDIAN" as keyof typeof ACCENTS,
+    language: "ENGLISH" as keyof typeof LANGUAGES,
+    voiceName: "ANANYA" as keyof typeof VOICE_NAMES,
+    engine: "PRIMARY" as keyof typeof ENGINE_LABELS,
+    isActive: true,
+  });
   const [systemInstructions, setSystemInstructions] = useState("");
   const [siPayloadTemplate, setSiPayloadTemplate] = useState("");
   const [waybeoPayloadTemplate, setWaybeoPayloadTemplate] = useState("");
-  const [agentName, setAgentName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [activeTab, setActiveTab] = useState<"instructions" | "config" | "si" | "waybeo">("instructions");
+  
+  const [activeTab, setActiveTab] = useState<"settings" | "instructions" | "technical" | "si" | "waybeo">("settings");
 
   useEffect(() => {
     fetch(`/api/voiceagents/${params.id}`)
       .then((r) => r.json())
-      .then((data) => {
+      .then((data: VoiceAgent) => {
+        setAgent(data);
+        setForm({
+          name: data.name || "",
+          phoneNumber: data.phoneNumber || "",
+          greeting: data.greeting || "",
+          accent: data.accent || "INDIAN",
+          language: data.language || "ENGLISH",
+          voiceName: data.voiceName || "ANANYA",
+          engine: data.engine || "PRIMARY",
+          isActive: data.isActive ?? true,
+        });
         setSystemInstructions(data.systemInstructions || "");
-        setAgentName(data.name || "");
-        setSlug(data.slug || "");
         setSiPayloadTemplate(
           data.siPayloadTemplate 
             ? JSON.stringify(data.siPayloadTemplate, null, 2)
@@ -148,12 +189,15 @@ export default function InstructionsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
+        ...form,
         systemInstructions,
         siPayloadTemplate: siTemplate,
         waybeoPayloadTemplate: waybeoTemplate,
       }),
     });
     if (res.ok) {
+      const updated = await res.json();
+      setAgent(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     }
@@ -176,9 +220,14 @@ export default function InstructionsPage() {
     );
   }
 
+  if (!agent) {
+    return <p className="text-red-500">VoiceAgent not found</p>;
+  }
+
   const tabs = [
+    { id: "settings" as const, label: "General Settings" },
     { id: "instructions" as const, label: "System Instructions" },
-    { id: "config" as const, label: "Configuration" },
+    { id: "technical" as const, label: "Technical" },
     { id: "si" as const, label: "SI Payload" },
     { id: "waybeo" as const, label: "Waybeo Payload" },
   ];
@@ -204,6 +253,125 @@ export default function InstructionsPage() {
         </nav>
       </div>
 
+      {/* General Settings Tab */}
+      {activeTab === "settings" && (
+        <Card className="p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">General Settings</h2>
+              <p className="text-sm text-slate-500">Core settings for this VoiceAgent</p>
+            </div>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+              form.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+            }`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${form.isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
+              {form.isActive ? "Active" : "Inactive"}
+            </span>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. Kia VoiceAgent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Inbound Phone Number</label>
+              <Input
+                value={form.phoneNumber}
+                onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
+                placeholder="+91 9876543210"
+              />
+              <p className="mt-1 text-xs text-slate-400">The phone number callers dial to reach this VoiceAgent</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Greeting Message</label>
+            <Textarea
+              value={form.greeting}
+              onChange={(e) => setForm({ ...form, greeting: e.target.value })}
+              rows={3}
+              placeholder="Hello! Welcome to..."
+            />
+            <p className="mt-1 text-xs text-slate-400">The first message spoken when a call connects</p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Voice</label>
+              <select
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={form.voiceName}
+                onChange={(e) => setForm({ ...form, voiceName: e.target.value as keyof typeof VOICE_NAMES })}
+              >
+                {Object.entries(VOICE_NAMES).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Accent</label>
+              <select
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={form.accent}
+                onChange={(e) => setForm({ ...form, accent: e.target.value as keyof typeof ACCENTS })}
+              >
+                {Object.entries(ACCENTS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Language</label>
+              <select
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={form.language}
+                onChange={(e) => setForm({ ...form, language: e.target.value as keyof typeof LANGUAGES })}
+              >
+                {Object.entries(LANGUAGES).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Engine</label>
+              <select
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={form.engine}
+                onChange={(e) => setForm({ ...form, engine: e.target.value as keyof typeof ENGINE_LABELS })}
+              >
+                {Object.entries(ENGINE_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={form.isActive}
+              onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <label htmlFor="isActive" className="text-sm text-slate-700">
+              VoiceAgent is active and accepting calls
+            </label>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <p className="text-xs text-slate-400">
+              Created {new Date(agent.createdAt).toLocaleDateString()} · Last updated {new Date(agent.updatedAt).toLocaleDateString()}
+            </p>
+          </div>
+        </Card>
+      )}
+
       {/* System Instructions Tab */}
       {activeTab === "instructions" && (
         <Card className="p-6 space-y-5">
@@ -216,7 +384,7 @@ export default function InstructionsPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Instructions for {agentName}
+              Instructions for {form.name}
             </label>
             <Textarea
               value={systemInstructions}
@@ -232,13 +400,13 @@ export default function InstructionsPage() {
         </Card>
       )}
 
-      {/* Configuration Tab */}
-      {activeTab === "config" && (
+      {/* Technical Tab */}
+      {activeTab === "technical" && (
         <Card className="p-6 space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Configuration</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Technical Configuration</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Technical configuration for this VoiceAgent.
+              Technical details and endpoints for this VoiceAgent.
             </p>
           </div>
 
@@ -248,11 +416,11 @@ export default function InstructionsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-500">Slug:</span>
-                  <code className="bg-white px-2 py-1 rounded border text-sm font-mono">{slug}</code>
+                  <code className="bg-white px-2 py-1 rounded border text-sm font-mono">{agent.slug}</code>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-500">Name:</span>
-                  <span className="text-sm font-medium text-slate-700">{agentName}</span>
+                  <span className="text-sm font-medium text-slate-700">{form.name}</span>
                 </div>
               </div>
             </div>
@@ -262,7 +430,7 @@ export default function InstructionsPage() {
               <div className="space-y-2">
                 <div className="text-sm text-slate-500">WSS URL:</div>
                 <code className="block bg-white px-2 py-2 rounded border text-xs font-mono break-all">
-                  wss://ws-singleinterfacews.pragyaa.ai/wsNew1?agent={slug}
+                  wss://ws-singleinterfacews.pragyaa.ai/wsNew1?agent={agent.slug}
                 </code>
               </div>
             </div>
@@ -272,7 +440,7 @@ export default function InstructionsPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Base Directory:</span>
-                  <code className="bg-white px-2 py-0.5 rounded border font-mono text-xs">/data/{slug === "spotlight" ? "kia2" : slug}/</code>
+                  <code className="bg-white px-2 py-0.5 rounded border font-mono text-xs">/data/{agent.slug === "spotlight" ? "kia2" : agent.slug}/</code>
                 </div>
                 <div className="text-slate-500 text-xs space-y-1">
                   <div>• <code>transcripts/</code> - Conversation transcripts</div>

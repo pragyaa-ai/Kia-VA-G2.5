@@ -3,9 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
 import { Card } from "@/components/ui/Card";
 import { VOICE_NAMES, ACCENTS, LANGUAGES, ENGINE_LABELS } from "@/lib/validation";
 import {
@@ -97,23 +94,12 @@ export default function VoiceAgentOverviewPage() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [period, setPeriod] = useState("30d");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [filters, setFilters] = useState({
     storeCode: "",
     carModel: "",
     testDrive: "",
-  });
-  const [form, setForm] = useState({
-    name: "",
-    phoneNumber: "",
-    greeting: "",
-    accent: "INDIAN" as keyof typeof ACCENTS,
-    language: "ENGLISH" as keyof typeof LANGUAGES,
-    voiceName: "ANANYA" as keyof typeof VOICE_NAMES,
-    engine: "PRIMARY" as keyof typeof ENGINE_LABELS,
-    isActive: true,
   });
 
   useEffect(() => {
@@ -141,33 +127,9 @@ export default function VoiceAgentOverviewPage() {
         setAgent(agentData);
         setAnalytics(analyticsData);
         setRecentCalls(callsData.calls || []);
-        setForm({
-          name: agentData.name,
-          phoneNumber: agentData.phoneNumber || "",
-          greeting: agentData.greeting,
-          accent: agentData.accent,
-          language: agentData.language,
-          voiceName: agentData.voiceName,
-          engine: agentData.engine,
-          isActive: agentData.isActive,
-        });
       })
       .finally(() => setLoading(false));
   }, [params.id, period, customRange.start, customRange.end, filters.storeCode, filters.carModel, filters.testDrive]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    const res = await fetch(`/api/voiceagents/${params.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setAgent(updated);
-    }
-    setSaving(false);
-  };
 
   const formatDuration = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`;
@@ -686,125 +648,6 @@ export default function VoiceAgentOverviewPage() {
         )}
       </Card>
 
-      {/* Configuration Card */}
-      <Card className="p-6 space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Configuration</h2>
-            <p className="text-sm text-slate-500">Core settings for this VoiceAgent</p>
-          </div>
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-            agent.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
-          }`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${agent.isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
-            {agent.isActive ? "Active" : "Inactive"}
-          </span>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. Kia VoiceAgent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Inbound Phone Number</label>
-            <Input
-              value={form.phoneNumber}
-              onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-              placeholder="+91 9876543210"
-            />
-            <p className="mt-1 text-xs text-slate-400">The phone number callers dial to reach this VoiceAgent</p>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Greeting Message</label>
-          <Textarea
-            value={form.greeting}
-            onChange={(e) => setForm({ ...form, greeting: e.target.value })}
-            rows={3}
-            placeholder="Hello! Welcome to..."
-          />
-          <p className="mt-1 text-xs text-slate-400">The first message spoken when a call connects</p>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Voice</label>
-            <select
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              value={form.voiceName}
-              onChange={(e) => setForm({ ...form, voiceName: e.target.value as keyof typeof VOICE_NAMES })}
-            >
-              {Object.entries(VOICE_NAMES).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Accent</label>
-            <select
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              value={form.accent}
-              onChange={(e) => setForm({ ...form, accent: e.target.value as keyof typeof ACCENTS })}
-            >
-              {Object.entries(ACCENTS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Language</label>
-            <select
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              value={form.language}
-              onChange={(e) => setForm({ ...form, language: e.target.value as keyof typeof LANGUAGES })}
-            >
-              {Object.entries(LANGUAGES).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Engine</label>
-            <select
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              value={form.engine}
-              onChange={(e) => setForm({ ...form, engine: e.target.value as keyof typeof ENGINE_LABELS })}
-            >
-              {Object.entries(ENGINE_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 pt-2">
-          <input
-            type="checkbox"
-            id="isActive"
-            checked={form.isActive}
-            onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <label htmlFor="isActive" className="text-sm text-slate-700">
-            VoiceAgent is active and accepting calls
-          </label>
-        </div>
-
-        <div className="flex items-center justify-between border-t border-slate-100 pt-5">
-          <p className="text-xs text-slate-400">
-            Created {new Date(agent.createdAt).toLocaleDateString()} · Last updated {new Date(agent.updatedAt).toLocaleDateString()}
-          </p>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
-      </Card>
     </div>
   );
 }
