@@ -40,6 +40,11 @@ export const createVoiceAgentSchema = z.object({
   // Payload templates for post-call webhooks (JSON objects)
   siPayloadTemplate: z.any().optional(),      // SI webhook payload structure
   waybeoPayloadTemplate: z.any().optional(),  // Waybeo callback payload structure
+  // Webhook endpoints for post-call payload delivery
+  siEndpointUrl: z.string().url().optional().or(z.literal("")),       // SI webhook URL
+  siAuthHeader: z.string().max(500).optional(),                       // SI Authorization header
+  waybeoEndpointUrl: z.string().url().optional().or(z.literal("")),   // Waybeo callback URL
+  waybeoAuthHeader: z.string().max(500).optional(),                   // Waybeo Authorization header
 });
 
 export type CreateVoiceAgentInput = z.infer<typeof createVoiceAgentSchema>;

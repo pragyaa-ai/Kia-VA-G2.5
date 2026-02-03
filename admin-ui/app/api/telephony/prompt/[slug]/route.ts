@@ -30,6 +30,13 @@ export async function GET(
         voiceName: true,
         systemInstructions: true,
         isActive: true,
+        // Payload templates and webhook endpoints for post-call delivery
+        siPayloadTemplate: true,
+        waybeoPayloadTemplate: true,
+        siEndpointUrl: true,
+        siAuthHeader: true,
+        waybeoEndpointUrl: true,
+        waybeoAuthHeader: true,
       },
     });
 
@@ -66,6 +73,14 @@ export async function GET(
       voiceName: agent.voiceName,
       geminiVoice: voiceNameMap[agent.voiceName] || "Aoede",
       systemInstructions: agent.systemInstructions || "",
+      // Payload templates
+      siPayloadTemplate: agent.siPayloadTemplate,
+      waybeoPayloadTemplate: agent.waybeoPayloadTemplate,
+      // Webhook endpoints for post-call delivery
+      siEndpointUrl: agent.siEndpointUrl || null,
+      siAuthHeader: agent.siAuthHeader || null,
+      waybeoEndpointUrl: agent.waybeoEndpointUrl || null,
+      waybeoAuthHeader: agent.waybeoAuthHeader || null,
     });
   } catch (error) {
     console.error("Error fetching agent prompt:", error);

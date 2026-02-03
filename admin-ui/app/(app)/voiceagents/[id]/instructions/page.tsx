@@ -104,6 +104,11 @@ interface VoiceAgent {
   systemInstructions?: string;
   siPayloadTemplate?: object;
   waybeoPayloadTemplate?: object;
+  // Webhook endpoints
+  siEndpointUrl?: string;
+  siAuthHeader?: string;
+  waybeoEndpointUrl?: string;
+  waybeoAuthHeader?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -129,6 +134,11 @@ export default function ConfigurationPage() {
   const [systemInstructions, setSystemInstructions] = useState("");
   const [siPayloadTemplate, setSiPayloadTemplate] = useState("");
   const [waybeoPayloadTemplate, setWaybeoPayloadTemplate] = useState("");
+  // Webhook endpoint state
+  const [siEndpointUrl, setSiEndpointUrl] = useState("");
+  const [siAuthHeader, setSiAuthHeader] = useState("");
+  const [waybeoEndpointUrl, setWaybeoEndpointUrl] = useState("");
+  const [waybeoAuthHeader, setWaybeoAuthHeader] = useState("");
   
   const [activeTab, setActiveTab] = useState<"settings" | "instructions" | "technical" | "si" | "waybeo">("settings");
 
@@ -158,6 +168,11 @@ export default function ConfigurationPage() {
             ? JSON.stringify(data.waybeoPayloadTemplate, null, 2)
             : JSON.stringify(DEFAULT_WAYBEO_TEMPLATE, null, 2)
         );
+        // Set webhook endpoints
+        setSiEndpointUrl(data.siEndpointUrl || "");
+        setSiAuthHeader(data.siAuthHeader || "");
+        setWaybeoEndpointUrl(data.waybeoEndpointUrl || "");
+        setWaybeoAuthHeader(data.waybeoAuthHeader || "");
       })
       .finally(() => setLoading(false));
   }, [params.id]);
@@ -193,6 +208,10 @@ export default function ConfigurationPage() {
         systemInstructions,
         siPayloadTemplate: siTemplate,
         waybeoPayloadTemplate: waybeoTemplate,
+        siEndpointUrl: siEndpointUrl || null,
+        siAuthHeader: siAuthHeader || null,
+        waybeoEndpointUrl: waybeoEndpointUrl || null,
+        waybeoAuthHeader: waybeoAuthHeader || null,
       }),
     });
     if (res.ok) {
@@ -492,6 +511,41 @@ export default function ConfigurationPage() {
             </Button>
           </div>
 
+          {/* Webhook Endpoint Configuration */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-4">
+            <h4 className="text-sm font-semibold text-indigo-800">Webhook Endpoint</h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-indigo-700 mb-1">
+                  SI Endpoint URL
+                </label>
+                <Input
+                  value={siEndpointUrl}
+                  onChange={(e) => setSiEndpointUrl(e.target.value)}
+                  placeholder="https://testing.myspotlight.co/api/voicebot-lead-save"
+                  className="text-sm"
+                />
+                <p className="mt-1 text-xs text-indigo-600">
+                  POST request will be sent here after each call
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-indigo-700 mb-1">
+                  Authorization Header
+                </label>
+                <Input
+                  value={siAuthHeader}
+                  onChange={(e) => setSiAuthHeader(e.target.value)}
+                  placeholder="Bearer your-api-key-here"
+                  className="text-sm font-mono"
+                />
+                <p className="mt-1 text-xs text-indigo-600">
+                  Sent as Authorization header (e.g., &quot;Bearer xxx&quot;)
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="text-sm font-semibold text-blue-800 mb-2">Available Placeholders</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-blue-700">
@@ -515,6 +569,7 @@ export default function ConfigurationPage() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Payload Template</label>
             <Textarea
               value={siPayloadTemplate}
               onChange={(e) => setSiPayloadTemplate(e.target.value)}
@@ -541,7 +596,42 @@ export default function ConfigurationPage() {
             </Button>
           </div>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          {/* Webhook Endpoint Configuration */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
+            <h4 className="text-sm font-semibold text-amber-800">Webhook Endpoint</h4>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-amber-700 mb-1">
+                  Waybeo Endpoint URL
+                </label>
+                <Input
+                  value={waybeoEndpointUrl}
+                  onChange={(e) => setWaybeoEndpointUrl(e.target.value)}
+                  placeholder="https://pbx-uat.waybeo.com/bot-call"
+                  className="text-sm"
+                />
+                <p className="mt-1 text-xs text-amber-600">
+                  POST request will be sent here after each call
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-amber-700 mb-1">
+                  Authorization Header
+                </label>
+                <Input
+                  value={waybeoAuthHeader}
+                  onChange={(e) => setWaybeoAuthHeader(e.target.value)}
+                  placeholder="Bearer your-waybeo-token"
+                  className="text-sm font-mono"
+                />
+                <p className="mt-1 text-xs text-amber-600">
+                  Sent as Authorization header (e.g., &quot;Bearer xxx&quot;)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-4">
             <h4 className="text-sm font-semibold text-amber-800 mb-2">Additional Placeholders</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-amber-700">
               <code>{"{transcript_text}"}</code>
@@ -554,6 +644,7 @@ export default function ConfigurationPage() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Payload Template</label>
             <Textarea
               value={waybeoPayloadTemplate}
               onChange={(e) => setWaybeoPayloadTemplate(e.target.value)}

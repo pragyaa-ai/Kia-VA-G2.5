@@ -392,7 +392,7 @@ async def handle_client(client_ws, path: str):
 
 async def _save_call_data(session: TelephonySession, cfg: Config) -> None:
     """
-    Save call data to files and push to Admin UI.
+    Save call data to files, push to Admin UI, and deliver to external webhooks.
     Called at end of call (normal, disconnect, or error).
     """
     if session.ucid == "UNKNOWN":
@@ -419,6 +419,9 @@ async def _save_call_data(session: TelephonySession, cfg: Config) -> None:
         )
         admin_client = AdminClient(cfg)
 
+        # Fetch agent config for webhook endpoints
+        agent_config = admin_client.fetch_agent_config(session.agent)
+
         # Build SI payload
         si_payload = payload_builder.build_payload(
             conversation=session.conversation,
@@ -440,8 +443,45 @@ async def _save_call_data(session: TelephonySession, cfg: Config) -> None:
         )
         storage.save_si_payload(session.ucid, si_payload)
 
-        # Push to Admin UI (async, fire-and-forget)
+        # Push to Admin UI database
         await admin_client.push_call_data(si_payload, session.ucid)
+
+        # Deliver to external webhooks if configured
+        if agent_config:
+            # SI webhook
+            si_endpoint = agent_config.get("siEndpointUrl")
+            si_auth = agent_config.get("siAuthHeader")
+            if si_endpoint:
+                print(f"[{session.ucid}] 📤 Delivering to SI webhook: {si_endpoint[:50]}...")
+                await admin_client.push_to_si_webhook(
+                    payload=si_payload,
+                    endpoint_url=si_endpoint,
+                    auth_header=si_auth,
+                    call_id=session.ucid,
+                )
+
+            # Waybeo webhook
+            waybeo_endpoint = agent_config.get("waybeoEndpointUrl")
+            waybeo_auth = agent_config.get("waybeoAuthHeader")
+            if waybeo_endpoint:
+                # Build Waybeo payload (simpler format)
+                waybeo_payload = {
+                    "ucid": session.ucid,
+                    "call_status": si_payload.get("completion_status", "incomplete"),
+                    "call_start_time": si_payload.get("start_time", ""),
+                    "call_end_time": si_payload.get("end_time", ""),
+                    "call_duration": duration_sec,
+                    "caller_number": session.customer_number or "",
+                    "agent_id": session.agent,
+                    "store_code": session.store_code or "",
+                }
+                print(f"[{session.ucid}] 📤 Delivering to Waybeo webhook: {waybeo_endpoint[:50]}...")
+                await admin_client.push_to_waybeo_webhook(
+                    payload=waybeo_payload,
+                    endpoint_url=waybeo_endpoint,
+                    auth_header=waybeo_auth,
+                    call_id=session.ucid,
+                )
 
     except Exception as e:
         print(f"[{session.ucid}] ❌ Error saving call data: {e}")

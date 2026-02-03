@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -52,7 +52,6 @@ type TabType = "transcript" | "summary" | "extracted" | "payload";
 
 export default function CallDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const [call, setCall] = useState<CallDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingSentiment, setGeneratingSentiment] = useState(false);
@@ -439,7 +438,7 @@ export default function CallDetailPage() {
         {/* Raw Payload Tab */}
         {activeTab === "payload" && (
           <Card className="p-6">
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">Raw Payload</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-4">SI Payload</h3>
             {call.payloadJson ? (
               <div className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
                 <pre className="text-sm text-slate-100 font-mono whitespace-pre-wrap">
@@ -448,7 +447,7 @@ export default function CallDetailPage() {
               </div>
             ) : (
               <p className="text-slate-400 text-center py-8">
-                No raw payload available for this call.
+                No payload available for this call.
               </p>
             )}
 

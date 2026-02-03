@@ -47,7 +47,7 @@ class Config:
     GEMINI_INPUT_SR: int = int(os.getenv("GEMINI_INPUT_SR", "16000"))  # Gemini mic input
     GEMINI_OUTPUT_SR: int = int(os.getenv("GEMINI_OUTPUT_SR", "24000"))  # Gemini audio output
 
-    # Buffers (ms)
+    # Buffers (ms) - smaller = lower latency, larger = more stable
     AUDIO_BUFFER_MS_INPUT: int = int(os.getenv("AUDIO_BUFFER_MS_INPUT", "100"))
     AUDIO_BUFFER_MS_OUTPUT: int = int(os.getenv("AUDIO_BUFFER_MS_OUTPUT", "100"))
 
@@ -114,9 +114,7 @@ AGENT_DIRS = {
     "spotlight": "kia2",  # Kia v2 (Gemini Live) - maps spotlight -> kia2 directory
     # "tata": "tata",     # Would use "tata" anyway (fallback)
     # "skoda": "skoda",   # Would use "skoda" anyway (fallback)
-}
-
-def get_agent_dir(agent: str) -> str:
+}def get_agent_dir(agent: str) -> str:
     """
     Get the data directory name for an agent.
     
