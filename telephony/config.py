@@ -115,8 +115,6 @@ AGENT_DIRS = {
     # "tata": "tata",     # Would use "tata" anyway (fallback)
     # "skoda": "skoda",   # Would use "skoda" anyway (fallback)
 }
-
-
 def get_agent_dir(agent: str) -> str:
     """
     Get the data directory name for an agent.
