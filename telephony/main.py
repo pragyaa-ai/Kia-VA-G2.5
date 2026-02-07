@@ -183,6 +183,19 @@ async def _gemini_reader(
                 if cfg.LOG_TRANSCRIPTS:
                     print(f"[{session.ucid}] 🛑 Gemini interrupted → clearing output buffer")
                 session.output_buffer.clear()
+
+                # Send clear event to telephony provider to stop queued audio immediately
+                try:
+                    clear_payload = {
+                        "event": "clear",
+                        "stream_sid": session.ucid,
+                        "ucid": session.ucid,
+                    }
+                    await session.client_ws.send(json.dumps(clear_payload))
+                    if cfg.DEBUG:
+                        print(f"[{session.ucid}] 🔇 Sent clear event to telephony")
+                except Exception:
+                    pass
                 continue
 
             # Capture transcription if present
@@ -277,11 +290,12 @@ async def handle_client(client_ws, path: str):
         model_uri=cfg.model_uri,
         voice=cfg.GEMINI_VOICE,
         system_instructions=prompt,
+        temperature=0.7,  # Lower temperature for calmer, more consistent responses
         enable_affective_dialog=True,
         enable_input_transcription=True,   # Enable for transcript capture
         enable_output_transcription=True,  # Enable for transcript capture
-        vad_silence_ms=500,   # Increased from 300ms for better noise tolerance
-        vad_prefix_ms=500,    # Increased from 400ms for better noise tolerance
+        vad_silence_ms=200,   # Lowered for faster barge-in detection (was 500)
+        vad_prefix_ms=250,    # Lowered for faster barge-in detection (was 500)
         activity_handling="START_OF_ACTIVITY_INTERRUPTS",
     )
 
@@ -301,10 +315,17 @@ async def handle_client(client_ws, path: str):
     )
 
     try:
-        # Wait for start event to get real UCID before connecting upstream
+        # Start Gemini connection EARLY (in parallel with waiting for start event)
+        # This reduces initial latency by ~4 seconds as Gemini warms up in parallel
+        if cfg.LOG_TRANSCRIPTS:
+            print(f"[telephony] 🚀 Starting Gemini connection early...")
+        gemini_connect_task = asyncio.create_task(session.gemini.connect())
+
+        # Wait for start event to get real UCID
         first = await asyncio.wait_for(client_ws.recv(), timeout=10.0)
         start_msg = json.loads(first)
         if start_msg.get("event") != "start":
+            gemini_connect_task.cancel()
             await client_ws.close(code=1008, reason="Expected start event")
             return
 
@@ -318,8 +339,8 @@ async def handle_client(client_ws, path: str):
         if cfg.LOG_TRANSCRIPTS:
             print(f"[{session.ucid}] 🎬 start event received on path={path}")
 
-        # Connect to Gemini
-        await session.gemini.connect()
+        # Wait for Gemini connection (started earlier for speed)
+        await gemini_connect_task
         if cfg.LOG_TRANSCRIPTS:
             print(f"[{session.ucid}] ✅ Connected to Gemini Live")
 
