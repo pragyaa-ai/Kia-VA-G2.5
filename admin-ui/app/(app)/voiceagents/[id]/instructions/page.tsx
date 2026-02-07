@@ -105,6 +105,7 @@ interface VoiceAgent {
   siPayloadTemplate?: object;
   waybeoPayloadTemplate?: object;
   // Webhook endpoints
+  siCustomerName?: string;
   siEndpointUrl?: string;
   siAuthHeader?: string;
   waybeoEndpointUrl?: string;
