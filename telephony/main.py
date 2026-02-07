@@ -293,7 +293,22 @@ async def _gemini_reader(
 
             # Buffer audio — the _audio_sender task handles paced delivery
             samples_8k = audio_processor.process_output_gemini_b64_to_8k_samples(audio_b64)
-            session.output_buffer.extend(samples_8k)
+
+            # Crossfade at chunk boundary to prevent clicks/pops between
+            # independently-resampled Gemini audio chunks
+            XFADE = 8  # 8 samples = 1ms at 8kHz — imperceptible but smooths edges
+            if session.output_buffer and len(samples_8k) > XFADE:
+                buf_len = len(session.output_buffer)
+                for i in range(min(XFADE, buf_len)):
+                    alpha = (i + 1) / XFADE
+                    idx = buf_len - XFADE + i
+                    if idx >= 0:
+                        session.output_buffer[idx] = int(
+                            session.output_buffer[idx] * (1 - alpha) + samples_8k[i] * alpha
+                        )
+                session.output_buffer.extend(samples_8k[XFADE:])
+            else:
+                session.output_buffer.extend(samples_8k)
     except Exception as e:
         if cfg.DEBUG:
             print(f"[{session.ucid}] ❌ Gemini reader error: {e}")
@@ -352,8 +367,8 @@ async def handle_client(client_ws, path: str):
         enable_affective_dialog=True,
         enable_input_transcription=True,   # Enable for transcript capture
         enable_output_transcription=True,  # Enable for transcript capture
-        vad_silence_ms=150,   # Aggressive: matches Artemis for fast barge-in detection
-        vad_prefix_ms=200,    # Aggressive: matches Artemis for fast barge-in detection
+        vad_silence_ms=150,   # Aggressive for fast barge-in detection
+        vad_prefix_ms=100,    # Low prefix for faster activity detection onset
         activity_handling="START_OF_ACTIVITY_INTERRUPTS",
     )
 
